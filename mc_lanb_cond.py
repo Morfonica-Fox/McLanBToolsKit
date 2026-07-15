@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import bisect
+from collections import deque
 import importlib
 import itertools
 import logging
 import time
-from collections import deque
+
 # [+] 修复未解析的特性
 from typing import Any
 

@@ -1,21 +1,29 @@
-import psutil
 import random
 
+import psutil
+
+
 def get_port_owner(port: int):
-    for conn in psutil.net_connections(kind='tcp'):
+    for conn in psutil.net_connections(kind="tcp"):
         if conn.status == psutil.CONN_LISTEN and conn.laddr.port == port:
             pid = conn.pid
             if pid:
                 proc = psutil.Process(pid)
-                return {'pid': pid, 'name': proc.name(), 'cmdline': proc.cmdline()}
+                return {"pid": pid, "name": proc.name(), "cmdline": proc.cmdline()}
     return None
 
+
 def demo_server():
-    server = {'motd': 'demo~', 'port': -1, 'delay': random.randint(1, 2)} # 每次都走调用 每次都是随机!
+    server = {
+        "motd": "demo~",
+        "port": -1,
+        "delay": random.randint(1, 2),
+    }  # 每次都走调用 每次都是随机!
     return server
 
+
 servers = [
-    demo_server,  
+    demo_server,
 ]
 
 # 猜猜为什么不用json了呢 解码它给你答案: (utf-8编码)

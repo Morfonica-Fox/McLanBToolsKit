@@ -86,6 +86,7 @@ ensure_package("watchdog")
 ensure_package("pydivert")
 
 import colorama
+
 # [Tip] ide补全, 可删除
 import elevate
 
@@ -102,6 +103,7 @@ except ImportError:
 
 import pydivert
 from watchdog.events import FileSystemEventHandler
+
 # [Tip] 上方 ensure 的时候以导入 watchdog
 from watchdog.observers import Observer
 
