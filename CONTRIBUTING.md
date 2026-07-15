@@ -77,4 +77,4 @@ python -c "import pydivert; pydivert.WinDivert.check_filter('true')"
 - 操作系统版本
 - Python 版本及实现（CPython / PyPy）
 - pydivert 版本
-- 完整的错误日志和复现步骤
+- 完整的复现步骤
