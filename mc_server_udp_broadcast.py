@@ -72,7 +72,7 @@ def stop_conf_flush_monitor(observer: "Observer"): # type: ignore
 
 working = False
 
-def bordcast_worker(called_server: dict | Callable):
+def broadcast_worker(called_server: dict | Callable):
     global working
     
     while working:
@@ -101,7 +101,7 @@ def start_broadcast_worker():
     
     working = True
     for server in msc['servers']:
-        worker_thread = threading.Thread(target=bordcast_worker, args=(server,), daemon=True)
+        worker_thread = threading.Thread(target=broadcast_worker, args=(server,), daemon=True)
         worker_thread.start() # 启动新的工作线程
         worker_threads.append(worker_thread) # 将工作线程添加到列表中
 
