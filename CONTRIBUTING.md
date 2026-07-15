@@ -17,10 +17,10 @@ pip install black isort
 ### 运行格式化
 
 ```bash
-# 先运行 isort（import 排序）
+# 先运行 isort(import 排序)
 isort .
 
-# 再运行 black（代码格式化）
+# 再运行 black(代码格式化)
 black .
 ```
 
@@ -49,15 +49,15 @@ Black 在 `profile = "black"` 模式下不会重新排列 isort 已经排好的 
 ```
 <类型>: <简短描述>
 
-<详细说明（可选）>
+<详细说明(可选)>
 ```
 
-类型示例：`feat`（新功能）、`fix`（修复）、`docs`（文档）、`refactor`（重构）、`style`（格式化）。
+类型示例：`feat`(新功能)、`fix`(修复)、`docs`(文档)、`refactor`(重构)、`style`(格式化)。
 
 ## 代码风格要点
 
 - 使用 `from __future__ import annotations` 推迟注解求值
-- 类型注解使用现代语法（`dict[str, Any]` 而非 `Dict[str, Any]`）
+- 类型注解使用现代语法(`dict[str, Any]` 而非 `Dict[str, Any]`)
 - 注释标记惯例：`[+]` 新增、`[=]` 修改/更正、`[-]` 删除
 - 全局状态通过 `kept_data` 字典在模块间共享，避免模块级可变全局变量
 - 热重载相关模块需实现 `will_update(timestamp)` 和 `on_updated(timestamp)` 钩子
@@ -67,7 +67,7 @@ Black 在 `profile = "black"` 模式下不会重新排列 isort 已经排好的 
 防火墙功能测试需要在 Windows 环境下以管理员权限运行，并确保 WinDivert 驱动已安装。
 
 ```bash
-# 安装 WinDivert 驱动（首次使用 pydivert 时自动处理）
+# 安装 WinDivert 驱动(首次使用 pydivert 时自动处理)
 python -c "import pydivert; pydivert.WinDivert.check_filter('true')"
 ```
 
@@ -75,6 +75,6 @@ python -c "import pydivert; pydivert.WinDivert.check_filter('true')"
 
 遇到问题请提交 Issue，附带以下信息：
 - 操作系统版本
-- Python 版本及实现（CPython / PyPy）
+- Python 版本及实现(CPython / PyPy)
 - pydivert 版本
 - 完整的复现步骤
