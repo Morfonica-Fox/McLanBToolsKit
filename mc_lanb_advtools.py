@@ -197,7 +197,7 @@ def parse_mc_style(
         if char != '§' or idx+1 > max_idx:
             if safe and char in control_chars:
                 code = ord(char)
-                buf.write(f'\x{code:02X}' if code <= 0xFF else f'\u{code:08X}')
+                buf.write(f'\\x{code:02X}' if code <= 0xFF else f'\\u{code:08X}')
             else:
                 buf.write(char)
             continue
@@ -226,7 +226,7 @@ def parse_mc_style(
         else:
             if safe and char in control_chars:
                 code = ord(char)
-                buf.write(f'\x{code:02X}' if code <= 0xFF else f'\u{code:08X}')
+                buf.write(f'\\x{code:02X}' if code <= 0xFF else f'\\u{code:08X}')
             else:
                 buf.write(char)
     
