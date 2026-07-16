@@ -139,6 +139,23 @@ GLOBAL_STYLE_MAPPINGS = { # 猜猜为啥不写 r 的格式
     'm': '9', 
 } # 因为 r 的格式是 恢复默认 默认的颜色由函数传入的参数决定
 
+control_chars = set(
+    chr(c) for c in [
+        *range(0,32), 
+        127, 
+        *range(0x80,0xA0), 
+        *range(0x200B,0x2010), 
+        *range(0x202A,0x202F), 
+        0x2028, 
+        0x2029, 
+        *range(0x2060,0x206A), 
+        0x061C, 
+        *range(0xFE00,0xFE10), 
+        *range(0xE0100,0xE01F0), 
+        *range(0xE0000,0xE0080) 
+    ]
+)
+
 def parse_mc_style(
         text:                    str, 
         enable_color:            bool = True, 
@@ -149,6 +166,7 @@ def parse_mc_style(
         always_hex_color:        bool = True, 
         using_gray_default:      bool = False, 
         auto_reset_ansi_back:    bool = True, 
+        safe:                    bool = True, 
         pre_allocate_ex_bufsize: int  = 256
     ):
     max_idx = len(text)-1
@@ -177,7 +195,12 @@ def parse_mc_style(
             will_skipped_char_cnt -= 1; continue
 
         if char != '§' or idx+1 > max_idx:
-            buf.write(char); continue
+            if safe and char in control_chars:
+                code = ord(char)
+                buf.write(f'\x{code:02X}' if code <= 0xFF else f'\u{code:08X}')
+            else:
+                buf.write(char)
+            continue
 
         next_char = text[idx+1]
         if next_char in color_keys:
@@ -201,7 +224,11 @@ def parse_mc_style(
             buf.write(f'\033[0;38;2;{r};{g};{b}m')
             will_skipped_char_cnt += 13
         else:
-            buf.write(char)
+            if safe and char in control_chars:
+                code = ord(char)
+                buf.write(f'\x{code:02X}' if code <= 0xFF else f'\u{code:08X}')
+            else:
+                buf.write(char)
     
     if auto_reset_ansi_back: buf.write('\033[0m') # 保底恢复颜色
     
