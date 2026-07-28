@@ -87,13 +87,11 @@ def color_gradient(val: int, max_val: int, pad_ex: int = 0) -> str:
 
     return f"\033[0;38;2;{r};{g};{b}m{val}\033[0m" + padder
 
-banned_ips = {'26.19.87.179'}
-
 def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
     original_data, coding = utils.auto_decode_bytes(packet.payload, allow_encodings=('utf-8', 'gbk', 'ascii'))
     coding                = coding.lower() + (5-len(coding)) * ' '
     src_ip, dst_ip        = packet.src_addr, packet.dst_addr
-    text, port, fml_data  = utils.parse_mc_lanpacket(original_data)
+    motd, port, fml_data  = utils.parse_mc_lanpacket(original_data)
     
     broadcast_counters = kept_data.setdefault('broadcast_counters', {})
     ip_counters = kept_data.setdefault('ip_counters', {})
@@ -123,12 +121,13 @@ def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
     f_per_min          = color_gradient(round(broadcast_counters[sid].get_per_time(60.0)), max_val=max_per_min,       pad_ex=2)
     f_ip_per_1dot5_sec = color_gradient(round(ip_counters[src_ip].get_per_time(1.5) ), max_val=ip_max_per_1dot5_sec,  pad_ex=2)
     f_ip_per_min       = color_gradient(round(ip_counters[src_ip].get_per_time(60.0)), max_val=ip_max_per_min,        pad_ex=2)
-    f_text             = utils.parse_mc_style(text, using_gray_default=True)#.replace('\033', '\\033')
+    f_motd             = utils.parse_mc_style(motd, using_gray_default=True)#.replace('\033', '\\033')
     
     if broadcast_counters[sid].get_per_time(1.5) > max_per_1dot5_sec or broadcast_counters[sid].get_per_time(60.0) > max_per_min:
         result = False
     if ip_counters[src_ip].get_per_time(1.5) > ip_max_per_1dot5_sec or ip_counters[src_ip].get_per_time(60.0) > ip_max_per_min:
         result = False
+    if motd == 'LiquidBounce LAN Broadcast': result = False
     
     p_info = f"""\
 \033[0;96m{timestamp} \
@@ -140,7 +139,7 @@ def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
 \033[0;33m ▶ \
 \033[0;1;94m{f_dst_ip} \
 \033[0;1;35m{f_port} \
-\033[0;31m{f_coding} """  + ('\033[0;92m[Allow →]' if result else '\033[0;91m[Block ✘]') + f"\033[0m {f_text}\033[0m"
+\033[0;31m{f_coding} """  + ('\033[0;92m[Allow →]' if result else '\033[0;91m[Block ✘]') + f"\033[0m {f_motd}\033[0m"
 
     packet.dst_addr = '255.255.255.255' # 修复 (Neo)Forge 客户端收不到广播包的问题
     #if src_ip in banned_ips:
