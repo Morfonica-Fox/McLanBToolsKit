@@ -5,7 +5,7 @@ target-version = ["py312"]
 target-version = "py312"
 
 [tool.ruff.lint]
-ignore = ["S104"]
+ignore = ["S104", "W291"]
 
 # [tool.ruff.format]
 # quote-style = "single"

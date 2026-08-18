@@ -2,28 +2,27 @@ from __future__ import annotations
 
 import io
 from contextlib import suppress
-from typing import Sequence, Literal
+from typing import Literal, Sequence
 
 # import pydivert
-import _colorize  # TODO
 from charset_normalizer import from_bytes
 
 # fmt: off
-GLOBAL_STD_ANSI_COLOR_MAPPINGS = {
+COLOR_MAPPINGS_ANSI = {  # 废弃这个 -- Cbscfe
     "0": "30",  "1": "34",  "2": "32",  "3": "36",
     "4": "31",  "5": "35",  "6": "33",  "7": "37",
     "8": "90",  "9": "94",  "a": "92",  "b": "96",
     "c": "91",  "d": "95",  "e": "93",  "f": "97",
 }
 
-GLOBAL_HEX_COLOR_MAPPINGS = {
+COLOR_MAPPINGS = {
     "0": "000000",  "1": "0000AA",  "2": "00AA00",  "3": "00AAAA",
     "4": "AA0000",  "5": "AA00AA",  "6": "FFAA00",  "7": "AAAAAA",
     "8": "555555",  "9": "5555FF",  "a": "55FF55",  "b": "55FFFF",
     "c": "FF5555",  "d": "FF55FF",  "e": "FFFF55",  "f": "FFFFFF",
 }
 
-GLOBAL_EX_COLOR_MAPPINGS = {
+COLOR_MAPPINGS_EX = {
     # 基岩版颜色代码(剔除重复)
     "g": "DDD605",  "h": "E3D4D1",  "i": "CECACA",  "j": "443A3B",
     "m": "971607",  "n": "B4684D",  "p": "DEB12D",  "q": "47A036",
@@ -36,7 +35,7 @@ GLOBAL_EX_COLOR_MAPPINGS = {
 # fmt: on
 
 
-GLOBAL_STYLE_MAPPINGS = {
+STYLE_MAPPINGS = {
     "l": "1",  # 加粗
     "m": "9",  # 删除线
     "n": "4",  # 下划线
@@ -78,7 +77,7 @@ def auto_decode_bytes(
     data: bytes,
     fallback_encodings: Sequence[str] = ("utf-8", "gbk"),
     allow_encodings: Sequence = (),
-):
+) -> tuple[str, str]:
     if not data:
         return "", "utf-8"
     result = from_bytes(data).best()
@@ -96,7 +95,8 @@ def auto_decode_bytes(
     ), fallback_encodings[0]
 
 
-def currect_ip(
+# 这个函数似乎并没有人用
+def filter_ip(
     ip: str,
     iptype: IPType = "unknown",
 ) -> str:
@@ -176,9 +176,9 @@ def parse_mc_style(
     buf.seek(0)
 
     GLOBAL_COLOR_MAPPINGS = (
-        GLOBAL_HEX_COLOR_MAPPINGS.copy()
+        COLOR_MAPPINGS.copy()
         if always_hex_color
-        else GLOBAL_STD_ANSI_COLOR_MAPPINGS.copy()
+        else COLOR_MAPPINGS_ANSI.copy()
     )
     if always_hex_color:
         for key in GLOBAL_COLOR_MAPPINGS.keys():
@@ -190,10 +190,8 @@ def parse_mc_style(
             )
             GLOBAL_COLOR_MAPPINGS[key] = f"38;2;{r};{g};{b}"
     color_keys = set(GLOBAL_COLOR_MAPPINGS.keys()) if enable_color else set()
-    ex_color_keys = (
-        set(GLOBAL_EX_COLOR_MAPPINGS.keys()) if enable_ex_color else set()
-    )
-    style_keys = set(GLOBAL_STYLE_MAPPINGS.keys()) if enable_style else set()
+    ex_color_keys = set(COLOR_MAPPINGS_EX.keys()) if enable_ex_color else set()
+    style_keys = set(STYLE_MAPPINGS.keys()) if enable_style else set()
 
     will_skipped_char_cnt = 0
 
@@ -222,10 +220,10 @@ def parse_mc_style(
             buf.write(f"\033[0;{GLOBAL_COLOR_MAPPINGS[next_char]}m")
             will_skipped_char_cnt += 1
         elif next_char in style_keys:
-            buf.write(f"\033[{GLOBAL_STYLE_MAPPINGS[next_char]}m")
+            buf.write(f"\033[{STYLE_MAPPINGS[next_char]}m")
             will_skipped_char_cnt += 1
         elif next_char in ex_color_keys:
-            hexstr = GLOBAL_EX_COLOR_MAPPINGS[next_char]
+            hexstr = COLOR_MAPPINGS_EX[next_char]
             r, g, b = (
                 int(hexstr[:2], 16),
                 int(hexstr[2:4], 16),
