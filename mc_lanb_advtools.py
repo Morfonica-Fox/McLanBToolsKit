@@ -23,19 +23,29 @@ GLOBAL_HEX_COLOR_MAPPINGS = {
     "c": "FF5555",  "d": "FF55FF",  "e": "FFFF55",  "f": "FFFFFF",
 }
 
-GLOBAL_BEDROCK_EX_COLOR_MAPPINGS = {
+GLOBAL_EX_COLOR_MAPPINGS = {
+    # 基岩版颜色代码(剔除重复)
     "g": "DDD605",  "h": "E3D4D1",  "i": "CECACA",  "j": "443A3B",
     "m": "971607",  "n": "B4684D",  "p": "DEB12D",  "q": "47A036",
     "s": "2CBAA8",  "t": "21497B",  "u": "9A5CC6",  "v": "EB7114",
     "w": "8CB3FF",
-}
 
-# r 的格式是 恢复默认 默认的颜色由函数传入的参数决定，因此留空
-GLOBAL_STYLE_MAPPINGS = {
-    "l": "1",  "o": "3",  "n": "4",  "k": "8",
-    "m": "9",
+    # 你可以提交issue/PR来申领一个自己的颜色代码
+    "C": "CB5CFE",
 }
 # fmt: on
+
+
+GLOBAL_STYLE_MAPPINGS = {
+    "l": "1",  # 加粗
+    "m": "9",  # 删除线
+    "n": "4",  # 下划线
+    "o": "3",  # 斜体
+    "k": "6",  # 乱码:闪烁 (原先为隐藏(8))
+    # r 的格式是 恢复默认 默认的颜色由函数传入的参数决定，因此留空
+    # "r": "0",
+}
+
 
 CONTROL_CHARS: set[str] = set(
     chr(c)
@@ -145,7 +155,7 @@ def parse_mc_style(
     pre_allocate_ex_bufsize: int = 256,
     *,
     enable_color: bool = True,
-    enable_bedrock_ex_color: bool = True,
+    enable_ex_color: bool = True,
     enable_true_color: bool = True,
     enable_style: bool = True,
     enable_reset: bool = True,
@@ -181,9 +191,7 @@ def parse_mc_style(
             GLOBAL_COLOR_MAPPINGS[key] = f"38;2;{r};{g};{b}"
     color_keys = set(GLOBAL_COLOR_MAPPINGS.keys()) if enable_color else set()
     ex_color_keys = (
-        set(GLOBAL_BEDROCK_EX_COLOR_MAPPINGS.keys())
-        if enable_bedrock_ex_color
-        else set()
+        set(GLOBAL_EX_COLOR_MAPPINGS.keys()) if enable_ex_color else set()
     )
     style_keys = set(GLOBAL_STYLE_MAPPINGS.keys()) if enable_style else set()
 
@@ -217,7 +225,7 @@ def parse_mc_style(
             buf.write(f"\033[{GLOBAL_STYLE_MAPPINGS[next_char]}m")
             will_skipped_char_cnt += 1
         elif next_char in ex_color_keys:
-            hexstr = GLOBAL_BEDROCK_EX_COLOR_MAPPINGS[next_char]
+            hexstr = GLOBAL_EX_COLOR_MAPPINGS[next_char]
             r, g, b = (
                 int(hexstr[:2], 16),
                 int(hexstr[2:4], 16),
