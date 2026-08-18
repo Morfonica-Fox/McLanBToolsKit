@@ -32,30 +32,32 @@ def currect_ip(ip: str, iptype: str = 'unknown'):
     
     return ''.join([char for char in ip if char in achars])
 
-def parse_mc_lanpacket(text: str | bytes | tuple | list):
+def parse_mc_lanpacket(text: str | bytes):
+    is_bytes = type(text) == bytes
     if type(text) in {tuple, list}:
-        text = ''.join(text)
+        text = (b'' if is_bytes else '').join(text)
     elif type(text) == bytes:
-        text = auto_decode_bytes(text)
+        #text = auto_decode_bytes(text)[0]
+        pass
     else:
         try:    text = str(text)
         except: return (None, None, None)
     
-    motd_start = text.find("[MOTD]")
+    motd_start = text.find(b"[MOTD]" if is_bytes else "[MOTD]")
     if motd_start == -1:
         return (None, None, None)
     content_begin = motd_start + 6
-    motd_end = text.find("[/MOTD]", content_begin)
+    motd_end = text.find(b"[/MOTD]" if is_bytes else "[/MOTD]", content_begin)
     if motd_end == -1:
         motd = text[content_begin:]
     else:
         motd = text[content_begin:motd_end]
     
-    ad_start = text.find("[AD]", motd_end if motd_end != -1 else 0)
+    ad_start = text.find(b"[AD]" if is_bytes else "[AD]", motd_end if motd_end != -1 else 0)
     ad = None
     if ad_start != -1:
         ad_content_begin = ad_start + 4
-        ad_end = text.find("[/AD]", ad_content_begin)
+        ad_end = text.find(b"[/AD]" if is_bytes else "[/AD]", ad_content_begin)
         if ad_end == -1:
             ad = text[ad_content_begin:]
         else:
@@ -63,11 +65,11 @@ def parse_mc_lanpacket(text: str | bytes | tuple | list):
         if not ad:
             ad = None
 
-    fml_start = text.find("[FML]")
+    fml_start = text.find(b"[FML]" if is_bytes else "[FML]")
     fml = None
     if fml_start != -1:
         fml_content_begin = fml_start + 5
-        fml_end = text.find("[/FML]", fml_content_begin)
+        fml_end = text.find(b"[/FML]" if is_bytes else "[/FML]", fml_content_begin)
         if fml_end == -1:
             fml = text[fml_content_begin:]
         else:
@@ -135,7 +137,7 @@ GLOBAL_STYLE_MAPPINGS = { # 猜猜为啥不写 r 的格式
     'l': '1', 
     'o': '3', 
     'n': '4', 
-    'k': '8', 
+    'k': '7', 
     'm': '9', 
 } # 因为 r 的格式是 恢复默认 默认的颜色由函数传入的参数决定
 
@@ -234,3 +236,32 @@ def parse_mc_style(
     
     return buf.getvalue()
 
+if __name__ == "__main__":
+    from mcstatus import JavaServer
+
+    ADDR = "26.47.19.126:25565"
+    server = JavaServer.lookup(ADDR)
+
+    try:
+        slp = server.status()
+        print("==== TCP‑SLP 结果 ====")
+        print(f"版本名称: {slp.version.name}")
+        print(f"协议号(protocol): {slp.version.protocol}")
+        print(f"MOTD: {slp.motd.to_plain()}")
+        print(f"在线人数数字: {slp.players.online} / {slp.players.max}")
+        sample_list = '\n'.join([f' - {p.uuid} {p.name}' for p in (slp.players.sample or [])])
+        print(f"SLP抽样玩家: \n{sample_list}")
+        print(f"延迟(ping ms): {slp.latency:.2f}\n")
+    except Exception as e:
+        print(f"SLP请求失败：{e}\n")
+
+    try:
+        q = server.query()
+        print("==== UDP‑Query 结果 ====")
+        print(f"服务器软件: {q.software.brand} {q.software.version}")
+        print(f"完整全部玩家列表: {q.players.list}")
+        print(f"在线数: {q.players.online} / {q.players.max}")
+        print(f"已加载地图名: {q.map}")
+        print(f"插件列表: {q.plugins}\n")
+    except Exception as e:
+        print(f"UDP‑Query失败：{e}")
