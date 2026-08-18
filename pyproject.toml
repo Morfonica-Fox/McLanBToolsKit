@@ -1,0 +1,12 @@
+[tool.black]
+target-version = ["py312"]
+
+[tool.ruff]
+target-version = "py312"
+
+[tool.ruff.lint]
+ignore = ["S104"]
+
+# [tool.ruff.format]
+# quote-style = "single"
+# black并不支持这个
