@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import os
+os.system(os.path.dirname(__file__))
+
 import ctypes
 import importlib
-import os
 import socket
 import struct
 import subprocess
@@ -10,16 +12,23 @@ import sys
 import threading
 import time
 from typing import NoReturn
+from pathlib import Path
+from contextlib import suppress
 
 import pydivert
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
+script_dir = Path(__file__).resolve().parent
+if str(script_dir) not in sys.path:
+    sys.path.insert(0, str(script_dir))
+# [fix] 修复 python 3.12.x 下无法从源码所在目录导入库的问题
+
 import mc_lanb_cond
+mc_lanb_cond.kept_data = {}
 from mc_lanb_advtools import *
 
 ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
-
 
 def install_whl_package(whl_filename: str) -> bool:
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -37,7 +46,6 @@ def install_whl_package(whl_filename: str) -> bool:
     except subprocess.CalledProcessError:
         return False
 
-
 def enable_vt_console() -> bool:
     if sys.platform == "win32":
         kernel32 = ctypes.windll.kernel32
@@ -50,7 +58,6 @@ def enable_vt_console() -> bool:
 
         new_mode = mode.value | ENABLE_VIRTUAL_TERMINAL_PROCESSING
         return not kernel32.SetConsoleMode(h, new_mode)
-
 
 def mc_lan_multicast_hold(
     mc_mcast_group: str = "224.0.2.60",
@@ -71,19 +78,18 @@ def mc_lan_multicast_hold(
         with suppress(OSError):
             sock.recvfrom(1024)
 
-
 def start_mcast_hold_daemon():
     t = threading.Thread(target=mc_lan_multicast_hold, daemon=True)
     t.start()
 
-
 def reload():
     global mc_lanb_cond
+    original_kept_data = mc_lanb_cond.kept_data
     mc_lanb_cond.will_update(time.time())
     mc_lanb_cond = importlib.reload(mc_lanb_cond)
+    mc_lanb_cond.kept_data = original_kept_data
     mc_lanb_cond.on_updated(time.time())
-
-
+    # cb虽然但是不要乱动命名空间注入啊 或者调试一下:( 不调试就提交是不好的习惯
 class CodeEventHandler(FileSystemEventHandler):
     def __init__(self):
         self.last_updated_time = -1
@@ -92,7 +98,6 @@ class CodeEventHandler(FileSystemEventHandler):
         if time.time() - self.last_updated_time < 0.1:
             return
         reload()
-
 
 def main():
     filter_str = "inbound and udp and udp.DstPort == 4445"
@@ -117,9 +122,9 @@ def main():
                 # condition['handler'](pkt, w)
             # print(f"[{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}] 已拦截：{pkt.src_addr} -> {pkt.dst_addr} UDP")
 
-
 enable_vt_console()
 start_mcast_hold_daemon()
 reload()
+
 if __name__ == "__main__":
     main()

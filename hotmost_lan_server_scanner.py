@@ -5,9 +5,16 @@ import sys
 import threading
 import time
 from datetime import datetime, timezone
+import sys
+from pathlib import Path
 
 import pydivert
 from mcstatus import JavaServer
+
+script_dir = Path(__file__).resolve().parent
+if str(script_dir) not in sys.path:
+    sys.path.insert(0, str(script_dir))
+# [fix] 修复 python 3.12.x 下无法从源码所在目录导入库的问题
 
 from mc_lanb_advtools import (
     auto_decode_bytes,

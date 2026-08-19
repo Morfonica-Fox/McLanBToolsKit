@@ -4,7 +4,6 @@ from typing import Callable, Self
 
 import atomicx
 
-
 class concurrent_dict:  # noqa: N801
     def __init__(
         self,

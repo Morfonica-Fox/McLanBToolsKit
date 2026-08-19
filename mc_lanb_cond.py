@@ -7,15 +7,20 @@ import importlib
 import itertools
 import time
 from collections import deque
+import sys
+from pathlib import Path
 
 import pydivert
 
+script_dir = Path(__file__).resolve().parent
+if str(script_dir) not in sys.path:
+    sys.path.insert(0, str(script_dir))
+# [fix] 修复 python 3.12.x 下无法从源码所在目录导入库的问题
 import mc_lanb_advtools as utils
 
 kept_data: dict  # 来个人给我解释一下这行代码的作用 -- Cbscfe
 
 banned_ips = {"26.19.87.179"}
-
 
 class PPTCounter:
     def __init__(self, ctr_id, max_record_time: float = 60.0):
@@ -102,7 +107,7 @@ def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
     )
     coding = coding.lower() + (5 - len(coding)) * " "
     src_ip, dst_ip = packet.src_addr, packet.dst_addr
-    text, port, fml_data = utils.parse_mc_lanpacket(original_data)
+    motd, port, fml_data = utils.parse_mc_lanpacket(original_data)
 
     broadcast_counters = kept_data.setdefault("broadcast_counters", {})
     ip_counters = kept_data.setdefault("ip_counters", {})
@@ -148,8 +153,8 @@ def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
         max_val=ip_max_per_min,
         pad_ex=2,
     )
-    f_text = utils.parse_mc_style(
-        text, using_gray_default=True
+    f_motd = utils.parse_mc_style(
+        motd, using_gray_default=True
     )  # .replace('\033', '\\033')
 
     if (
@@ -176,7 +181,7 @@ def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
 \033[0;1;35m{f_port} \
 \033[0;31m{f_coding} """
         + ("\033[0;92m[Allow →]" if result else "\033[0;91m[Block ✘]")
-        + f"\033[0m {f_text}\033[0m"
+        + f"\033[0m {f_motd}\033[0m"
     )
 
     packet.dst_addr = (
