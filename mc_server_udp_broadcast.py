@@ -80,7 +80,7 @@ def broadcast_worker(called_server: dict | Callable):
 
         if isinstance(called_server, dict):
             server = called_server
-        elif callzable(called_server):
+        elif callable(called_server):
             server = called_server()
 
         server_port = server["port"]

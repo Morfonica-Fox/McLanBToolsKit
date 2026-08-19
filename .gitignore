@@ -36,3 +36,6 @@ WinDivert*.sys
 # Environment
 .env
 .env.local
+
+# 被抛弃的配置文件
+broadcast_config.toml
