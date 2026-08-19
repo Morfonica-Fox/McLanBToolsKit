@@ -77,8 +77,8 @@ CONTROL_CHARS: set[str] = set(
 
 PACKET_PATTERN = re.compile(
     r"""\[MOTD\](?P<motd>.*)\[/MOTD\]  # 捕获MOTD和端口号
-        \[AD\](?P<motd>.*)\[/AD\]      # 这两项必须出现
-        (\[FML\](?P<fml>.*)\[/FML\])? # 捕获FML，这一项可选""",
+        \[AD\](?P<ad>.*)\[/AD\]        # 以上两项必须出现
+        (\[FML\](?P<fml>.*)\[/FML\])?  # 捕获FML，这一项可选""",
     re.VERBOSE,
 )
 
@@ -129,8 +129,11 @@ def filter_ip(
 
 
 def parse_mc_lanpacket(text: str) -> ParsedPacket:
+    text_match = PACKET_PATTERN.match(text)
+    if text_match is None:
+        raise ValueError
 
-    return (motd, ad, fml)
+    return ParsedPacket(**text_match.groupdict())
 
 
 def parse_mc_style(
