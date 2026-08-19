@@ -73,19 +73,11 @@ CONTROL_CHARS: set[str] = set(
     ]
 )
 
-PACKET_PATTERN_STRING = re.compile(
+PACKET_PATTERN = re.compile(
     r"""\[MOTD\](?P<motd>.*)\[/MOTD\]  # 捕获MOTD和端口号
         \[AD\](?P<ad>.*)\[/AD\]        # 以上两项必须出现
         (\[FML\](?P<fml>.*)\[/FML\])?  # 捕获FML，这一项可选""",
     re.VERBOSE,
-)
-
-PACKET_PATTERN_BYTES = re.compile(
-rb"""
-\[MOTD\](?P<motd>.*?)\[/MOTD\]
-\[AD\](?P<ad>.*?)\[/AD\]
-(\[FML\](?P<fml>.*?)\[/FML\])?
-""".replace(b'\n', b'')
 )
 
 IPType: TypeAlias = Literal["ipv4/v8", "ipv4", "ipv8", "ipv6", "unknown"]
@@ -135,7 +127,7 @@ def filter_ip(
 
 
 def parse_mc_lanpacket(text: str) -> ParsedPacket:
-    text_match = PACKET_PATTERN_STRING.match(text)
+    text_match = PACKET_PATTERN.match(text)
     if text_match is None:
         raise ValueError
 
