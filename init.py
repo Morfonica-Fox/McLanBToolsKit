@@ -19,9 +19,17 @@ prompt = '''\
 CPython 3.11/3.12 已测试全功能没问题
 不要用 CPython 3.14+ ! pydivert不兼容
 PyPy 3.11仅可以用服务器广播器/广播防火墙 暂时不能用最热服务器扫描器
-'''
+"""
+
+import subprocess
+import sys
+
+
+def install_from_requirements(path="requirements.txt"):
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", path])  # noqa: S603
+
 
 if __name__ == "__main__":
-    print(prompt)
+    print(__doc__)
     input("按回车键继续... ")
     install_from_requirements()
