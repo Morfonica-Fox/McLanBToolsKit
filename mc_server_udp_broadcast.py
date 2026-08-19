@@ -39,27 +39,23 @@ def send_multicast(
         sock.sendto(data, (group, port))
 
 
-def load_servers_from_conf(
-    retry_times: int = 5,
-    callback: Callable | None = None,
-):
+def load_servers_from_conf(retry_times: int = 5):
     global msc
     if retry_times <= 0:
-        raise Exception("配置文件无法加载!")
+        raise ImportError("配置文件无法加载!")
     try:
         msc = {}
         with open("mc_servers_config.py", "r", encoding="utf-8") as f:
             exec(f.read(), msc, msc)
         print("[+] 加载配置文件完成!")
-    except Exception as e:
+    except Exception:
         load_servers_from_conf(retry_times=retry_times - 1)
-    if callback:
-        callback()
 
 
 class ConfFlushHandler(FileSystemEventHandler):
     def on_modified(self, event: FileSystemEvent):  # noqa: ARG002
-        load_servers_from_conf(callback=start_broadcast_worker)
+        load_servers_from_conf()
+        start_broadcast_worker()
 
 
 def start_conf_flush_monitor():
@@ -82,9 +78,9 @@ def broadcast_worker(called_server: dict | Callable):
     while working:
         start_time = time.time()
 
-        if type(called_server) == dict:
+        if isinstance(called_server, dict):
             server = called_server
-        elif callable(called_server):
+        elif callzable(called_server):
             server = called_server()
 
         server_port = server["port"]

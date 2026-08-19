@@ -1,18 +1,19 @@
-#Copyright (c) [2026] [Morfonica_Fox]
-#[McLanBToolsKit] is licensed under Mulan PubL v2.
-#You can use this software according to the terms and conditions of the Mulan PubL v2.
-#You may obtain a copy of Mulan PubL v2 at:
+# Copyright (c) [2026] [Morfonica_Fox]
+# [McLanBToolsKit] is licensed under Mulan PubL v2.
+# You can use this software according to the terms and conditions of the Mulan PubL v2.
+# You may obtain a copy of Mulan PubL v2 at:
 #         http://license.coscl.org.cn/MulanPubL-2.0
-#THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
-#EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
-#MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
-#See the Mulan PubL v2 for more details.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+# EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+# MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+# See the Mulan PubL v2 for more details.
 
 import functools
 import threading
 from typing import Callable, Self
 
 import atomicx
+
 
 class concurrent_dict:  # noqa: N801
     def __init__(
@@ -155,7 +156,7 @@ class concurrent_dict:  # noqa: N801
 
     @_non_atomised_wrapper
     def clear(self):
-        self._entry_count.set(0)
+        self._entry_count.set(0)  # 这里IDE报错了是正常的吗 -- Cbscfe
         state = [False] * (1 << self.capacity)
         while True:
             for index, (bucket, lock) in enumerate(
