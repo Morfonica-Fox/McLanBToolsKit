@@ -2,3 +2,4 @@ pydivert
 atomicx
 charset_normalizer
 watchdog
+psutil
