@@ -126,7 +126,7 @@ def log_servers():
     ) as wd:
         wdobj = wd
         for packet in wd:
-            motd, port, fml_data = parse_mc_lanpacket(packet.payload)
+            motd, port, fml_data = parse_mc_lanpacket(auto_decode_bytes(packet.payload)[0])
             # decoded_motd, coding = auto_decode_bytes(motd, allow_encodings=('utf-8', 'gbk', 'ascii'))
             # styled_motd          = parse_mc_style(decoded_motd)
             src_ip, dst_ip = packet.src_addr, packet.dst_addr
@@ -231,8 +231,8 @@ def advance_style_top_server(
     src_ip, port, last_scan_timestamp, motd, player_count, player_sample
 ):
     return f"""\
-\033[1;48;2;220;0;0m\033[38;2;255;255;255m╔════════════ Top 1. {src_ip.decode("utf-8")}:{port.decode("utf-8")} \033[22;3;38;2;180;180;180m(last_scan: {qpc_to_utc_datetime(last_scan_timestamp)}) ════════════\033[0m
-\033[1;48;2;220;0;0m\033[38;2;255;255;255m║\033[0m {parse_mc_style(auto_decode_bytes(motd)[0])}\033[0m
+\033[1;48;2;220;0;0m\033[38;2;255;255;255m╔════════════ Top 1. {src_ip}:{port} \033[22;3;38;2;180;180;180m(last_scan: {qpc_to_utc_datetime(last_scan_timestamp)}) ════════════\033[0m
+\033[1;48;2;220;0;0m\033[38;2;255;255;255m║\033[0m {parse_mc_style(motd)}\033[0m
 \033[1;48;2;220;0;0m\033[38;2;255;255;255m║\033[0m \033[1;38;2;255;172;0m{player_count} players online, sample: {[player.name for player in player_sample]}\033[0m
 """
 
@@ -263,8 +263,8 @@ while True:
         if player_sample is None:
             continue
         try:
-            server_addr = src_ip + b":" + port
-            server_addr += b" " * max(0, 21 - len(server_addr))
+            server_addr = src_ip.decode("utf-8") + ":" + port
+            server_addr += " " * max(0, 21 - len(server_addr))
             if is_first:
                 sys.stdout.buffer.write(
                     advance_style_top_server(
@@ -279,7 +279,7 @@ while True:
                 is_first = False
             else:
                 sys.stdout.buffer.write(
-                    f"{server_addr.decode('utf-8')}- {parse_mc_style(auto_decode_bytes(motd)[0])} - {player_count} - {[player.name for player in player_sample]}\n".encode(
+                    f"{server_addr}- {parse_mc_style(motd)} - {player_count} - {[player.name for player in player_sample]}\n".encode(
                         "utf-8"
                     )
                 )

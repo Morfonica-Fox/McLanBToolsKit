@@ -75,20 +75,13 @@ CONTROL_CHARS: set[str] = set(
     ]
 )
 
-PACKET_PATTERN_STRING = re.compile(
-r"""
-\[MOTD\](?P<motd>.*?)\[/MOTD\]
-\[AD\](?P<ad>.*?)\[/AD\]
-(\[FML\](?P<fml>.*?)\[/FML\])?
-""".replace('\n', '')
-)
-
-PACKET_PATTERN_BYTES = re.compile(
-rb"""
-\[MOTD\](?P<motd>.*?)\[/MOTD\]
-\[AD\](?P<ad>.*?)\[/AD\]
-(\[FML\](?P<fml>.*?)\[/FML\])?
-""".replace(b'\n', b'')
+PACKET_PATTERN = re.compile(
+    r"""
+    \[MOTD\](?P<motd>.*?)\[/MOTD\]
+    \[AD\](?P<ad>.*?)\[/AD\]
+    (\[FML\](?P<fml>.*?)\[/FML\])?
+    """,
+    re.VERBOSE
 )
 
 IPType: TypeAlias = Literal["ipv4/v8", "ipv4", "ipv8", "ipv6", "unknown"]
@@ -137,8 +130,8 @@ def filter_ip(
     return "".join(filter(lambda char: char in achars, ip))
 
 
-def parse_mc_lanpacket(text: str | bytes) -> ParsedPacket:
-    text_match = (PACKET_PATTERN_STRING if isinstance(text, str) else PACKET_PATTERN_BYTES).match(text)
+def parse_mc_lanpacket(text: str) -> ParsedPacket:
+    text_match = PACKET_PATTERN.match(text)
     if text_match is None:
         raise ValueError
 

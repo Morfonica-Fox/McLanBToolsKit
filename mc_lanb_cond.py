@@ -111,7 +111,7 @@ def color_gradient(val: int, max_val: int, pad_ex: int = 0) -> str:
     return f"\033[0;38;2;{r};{g};{b}m{val}\033[0m" + padder
 
 
-def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
+def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):    
     original_data, coding = utils.auto_decode_bytes(
         packet.payload, allow_encodings=("utf-8", "gbk", "ascii")
     )
