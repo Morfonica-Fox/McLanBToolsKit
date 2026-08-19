@@ -27,19 +27,18 @@ import pydivert
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
+# os.system(os.path.dirname(__file__))
+script_dir = Path(__file__).resolve().parent
+if str(script_dir) not in sys.path:
+    sys.path.insert(0, str(script_dir))
+# [fix] 修复 python 3.12.x 下无法从源码所在目录导入库的问题
+# 不要乱删逻辑我求你了 跑一下再push
 import mc_lanb_cond
 from mc_lanb_advtools import *
 
 ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
 
 mc_lanb_cond.kept_data = {}
-
-# os.system(os.path.dirname(__file__))
-script_dir = Path(__file__).resolve().parent
-if str(script_dir) not in sys.path:
-    sys.path.insert(0, str(script_dir))
-# [fix] 修复 python 3.12.x 下无法从源码所在目录导入库的问题
-
 
 def install_whl_package(whl_filename: str) -> bool:
     current_dir = os.path.dirname(os.path.abspath(__file__))
