@@ -45,7 +45,6 @@ COLOR_MAPPINGS_EX = {
 }
 # fmt: on
 
-
 STYLE_MAPPINGS = {
     "l": "1",  # 加粗
     "m": "9",  # 删除线
@@ -55,7 +54,6 @@ STYLE_MAPPINGS = {
     # r 的格式是 恢复默认 默认的颜色由函数传入的参数决定，因此留空
     # "r": "0",
 }
-
 
 CONTROL_CHARS: set[str] = set(
     chr(c)
@@ -75,13 +73,19 @@ CONTROL_CHARS: set[str] = set(
     ]
 )
 
-PACKET_PATTERN = re.compile(
-    r"""
-    \[MOTD\](?P<motd>.*?)\[/MOTD\]
-    \[AD\](?P<ad>.*?)\[/AD\]
-    (\[FML\](?P<fml>.*?)\[/FML\])?
-    """,
-    re.VERBOSE
+PACKET_PATTERN_STRING = re.compile(
+    r"""\[MOTD\](?P<motd>.*)\[/MOTD\]  # 捕获MOTD和端口号
+        \[AD\](?P<ad>.*)\[/AD\]        # 以上两项必须出现
+        (\[FML\](?P<fml>.*)\[/FML\])?  # 捕获FML，这一项可选""",
+    re.VERBOSE,
+)
+
+PACKET_PATTERN_BYTES = re.compile(
+rb"""
+\[MOTD\](?P<motd>.*?)\[/MOTD\]
+\[AD\](?P<ad>.*?)\[/AD\]
+(\[FML\](?P<fml>.*?)\[/FML\])?
+""".replace(b'\n', b'')
 )
 
 IPType: TypeAlias = Literal["ipv4/v8", "ipv4", "ipv8", "ipv6", "unknown"]
@@ -131,7 +135,7 @@ def filter_ip(
 
 
 def parse_mc_lanpacket(text: str) -> ParsedPacket:
-    text_match = PACKET_PATTERN.match(text)
+    text_match = PACKET_PATTERN_STRING.match(text)
     if text_match is None:
         raise ValueError
 

@@ -1,12 +1,12 @@
-#Copyright (c) [2026] [Morfonica_Fox]
-#[McLanBToolsKit] is licensed under Mulan PubL v2.
-#You can use this software according to the terms and conditions of the Mulan PubL v2.
-#You may obtain a copy of Mulan PubL v2 at:
+# Copyright (c) [2026] [Morfonica_Fox]
+# [McLanBToolsKit] is licensed under Mulan PubL v2.
+# You can use this software according to the terms and conditions of the Mulan PubL v2.
+# You may obtain a copy of Mulan PubL v2 at:
 #         http://license.coscl.org.cn/MulanPubL-2.0
-#THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
-#EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
-#MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
-#See the Mulan PubL v2 for more details.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+# EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+# MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+# See the Mulan PubL v2 for more details.
 
 from __future__ import annotations
 
@@ -15,22 +15,24 @@ __all__ = ["handler"]
 import bisect
 import importlib
 import itertools
+import sys
 import time
 from collections import deque
-import sys
 from pathlib import Path
 
 import pydivert
+
+import mc_lanb_advtools as utils
 
 script_dir = Path(__file__).resolve().parent
 if str(script_dir) not in sys.path:
     sys.path.insert(0, str(script_dir))
 # [fix] 修复 python 3.12.x 下无法从源码所在目录导入库的问题
-import mc_lanb_advtools as utils
 
 kept_data: dict  # 来个人给我解释一下这行代码的作用 -- Cbscfe
 
 banned_ips = {"26.19.87.179"}
+
 
 class PPTCounter:
     def __init__(self, ctr_id, max_record_time: float = 60.0):
@@ -111,11 +113,14 @@ def color_gradient(val: int, max_val: int, pad_ex: int = 0) -> str:
     return f"\033[0;38;2;{r};{g};{b}m{val}\033[0m" + padder
 
 
-def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):    
+def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
+    assert packet.payload is not None
+
     original_data, coding = utils.auto_decode_bytes(
-        packet.payload, allow_encodings=("utf-8", "gbk", "ascii")
+        packet.payload,
+        allow_encodings=("utf-8", "gbk", "ascii"),
     )
-    coding = coding.lower() + (5 - len(coding)) * " "
+    coding = f"{coding.lower(): <5}"
     src_ip, dst_ip = packet.src_addr, packet.dst_addr
     motd, port, fml_data = utils.parse_mc_lanpacket(original_data)
 

@@ -20,25 +20,31 @@ import sys
 import threading
 import time
 from contextlib import suppress
-from pathlib import Path
+from pathlib import Path  # TODO
 from typing import NoReturn
 
 import pydivert
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-# os.system(os.path.dirname(__file__))
-script_dir = Path(__file__).resolve().parent
-if str(script_dir) not in sys.path:
-    sys.path.insert(0, str(script_dir))
-# [fix] 修复 python 3.12.x 下无法从源码所在目录导入库的问题
-# 不要乱删逻辑我求你了 跑一下再push
 import mc_lanb_cond
 from mc_lanb_advtools import *
 
 ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
 
 mc_lanb_cond.kept_data = {}
+
+# os.system(os.path.dirname(__file__))
+# script_dir = Path(__file__).resolve().parent
+# if str(script_dir) not in sys.path:
+#    sys.path.insert(0, str(script_dir))
+# [fix] 修复 python 3.12.x 下无法从源码所在目录导入库的问题
+# 不要乱删逻辑我求你了 跑一下再push
+#
+# 你自己IDE和项目管理有问题不要来乱动这个代码
+# 不要乱动执行位置
+# -- Cbscfe
+
 
 def install_whl_package(whl_filename: str) -> bool:
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -134,10 +140,8 @@ def main():
     with pydivert.WinDivert(filter_str) as w:
         while True:
             pkt: pydivert.Packet = w.recv()
-            with suppress(Exception):
-                mc_lanb_cond.handler(pkt, w)
-                # condition['handler'](pkt, w)
-            # print(f"[{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}] 已拦截：{pkt.src_addr} -> {pkt.dst_addr} UDP")
+            # with suppress(Exception):
+            mc_lanb_cond.handler(pkt, w)
 
 
 enable_vt_console()
