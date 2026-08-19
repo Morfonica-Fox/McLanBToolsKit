@@ -1,18 +1,19 @@
-#Copyright (c) [2026] [Morfonica_Fox]
-#[McLanBToolsKit] is licensed under Mulan PubL v2.
-#You can use this software according to the terms and conditions of the Mulan PubL v2.
-#You may obtain a copy of Mulan PubL v2 at:
+# Copyright (c) [2026] [Morfonica_Fox]
+# [McLanBToolsKit] is licensed under Mulan PubL v2.
+# You can use this software according to the terms and conditions of the Mulan PubL v2.
+# You may obtain a copy of Mulan PubL v2 at:
 #         http://license.coscl.org.cn/MulanPubL-2.0
-#THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
-#EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
-#MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
-#See the Mulan PubL v2 for more details.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+# EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+# MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+# See the Mulan PubL v2 for more details.
 
 from __future__ import annotations
 
 import io
+import re
 from contextlib import suppress
-from typing import Literal, Sequence
+from typing import Literal, NamedTuple, Sequence, TypeAlias
 
 # import pydivert
 from charset_normalizer import from_bytes
@@ -58,7 +59,7 @@ STYLE_MAPPINGS = {
 
 CONTROL_CHARS: set[str] = set(
     chr(c)
-    for c in [ # cb你换个模型吧我求你了 32 = 0x20 0x32是个啥 把普通字符和空格都包含进去了
+    for c in [
         *range(0x00, 0x20),  # 基础C0控制字符
         0x7F,  # DEL删除字符
         *range(0x80, 0xA0),  # C1控制字符
@@ -74,13 +75,20 @@ CONTROL_CHARS: set[str] = set(
     ]
 )
 
-type IPType = Literal["ipv4/v8", "ipv4", "ipv8", "ipv6", "unknown"]
-type ParsedPacket = (
-    tuple[None, None, None]
-    | tuple[str, None, None]
-    | tuple[str, str, None]
-    | tuple[str, str, str]
+PACKET_PATTERN = re.compile(
+    r"""\[MOTD\](?P<motd>.*)\[/MOTD\]  # 捕获MOTD和端口号
+        \[AD\](?P<motd>.*)\[/AD\]      # 这两项必须出现
+        (\[FML\](?P<fml>.*)\[/FML\])? # 捕获FML，这一项可选""",
+    re.VERBOSE,
 )
+
+IPType: TypeAlias = Literal["ipv4/v8", "ipv4", "ipv8", "ipv6", "unknown"]
+
+
+class ParsedPacket(NamedTuple):
+    motd: str
+    ad: str
+    fml: str | None
 
 
 def auto_decode_bytes(
@@ -120,51 +128,7 @@ def filter_ip(
     return "".join(filter(lambda char: char in achars, ip))
 
 
-def parse_mc_lanpacket(text: str | bytes):
-    # 不要乱排序喵! 出bug了 回滚了一下
-    is_bytes = type(text) == bytes
-    if type(text) in {tuple, list}:
-        text = (b'' if is_bytes else '').join(text)
-    elif type(text) == bytes:
-        #text = auto_decode_bytes(text)[0]
-        pass
-    else:
-        try:    text = str(text)
-        except: return (None, None, None)
-    
-    motd_start = text.find(b"[MOTD]" if is_bytes else "[MOTD]")
-    if motd_start == -1:
-        return (None, None, None)
-    content_begin = motd_start + 6
-    motd_end = text.find(b"[/MOTD]" if is_bytes else "[/MOTD]", content_begin)
-    if motd_end == -1:
-        motd = text[content_begin:]
-    else:
-        motd = text[content_begin:motd_end]
-    
-    ad_start = text.find(b"[AD]" if is_bytes else "[AD]", motd_end if motd_end != -1 else 0)
-    ad = None
-    if ad_start != -1:
-        ad_content_begin = ad_start + 4
-        ad_end = text.find(b"[/AD]" if is_bytes else "[/AD]", ad_content_begin)
-        if ad_end == -1:
-            ad = text[ad_content_begin:]
-        else:
-            ad = text[ad_content_begin:ad_end]
-        if not ad:
-            ad = None
-
-    fml_start = text.find(b"[FML]" if is_bytes else "[FML]")
-    fml = None
-    if fml_start != -1:
-        fml_content_begin = fml_start + 5
-        fml_end = text.find(b"[/FML]" if is_bytes else "[/FML]", fml_content_begin)
-        if fml_end == -1:
-            fml = text[fml_content_begin:]
-        else:
-            fml = text[fml_content_begin:fml_end]
-        if not fml:
-            fml = None
+def parse_mc_lanpacket(text: str) -> ParsedPacket:
 
     return (motd, ad, fml)
 
@@ -280,4 +244,3 @@ def parse_mc_style(
         buf.write("\033[0m")  # 保底恢复颜色
 
     return buf.getvalue()
-
