@@ -19,7 +19,9 @@ from typing import Literal, NamedTuple, Sequence, TypeAlias
 from charset_normalizer import from_bytes
 
 # fmt: off
-COLOR_MAPPINGS_ANSI = { # 传入参数可以控制用控制台的ANSI内置颜色代码而非固定真彩 (虽然本项目目前没有这么调用的 但是可以给其他项目用)
+COLOR_MAPPINGS_ANSI = {
+    # 传入参数可以控制用控制台的ANSI内置颜色代码而非固定真彩
+    # (虽然本项目目前没有这么调用的 但是可以给其他项目用)
     "0": "30",  "1": "34",  "2": "32",  "3": "36",
     "4": "31",  "5": "35",  "6": "33",  "7": "37",
     "8": "90",  "9": "94",  "a": "92",  "b": "96",

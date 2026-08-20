@@ -27,13 +27,15 @@ import pydivert
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-script_dir = Path(__file__).parent.resolve() # 支持Embedding版本Python! 
-sys.path.insert(0, str(script_dir)) # Embedding版Python默认不从脚本所在目录导入库 所以要加这个
+script_dir = Path(__file__).parent.resolve()  # 支持Embedding版本Python!
+sys.path.insert(0, str(script_dir))  # Embedding版默认不从脚本所在目录导入库
 import mc_lanb_cond
 from mc_lanb_advtools import *
 
+
 ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
 mc_lanb_cond.kept_data = {}
+
 
 def install_whl_package(whl_filename: str) -> bool:
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -67,6 +69,8 @@ def enable_vt_console() -> bool:
 
 
 already_holded_multicast = threading.Event()
+
+
 def mc_lan_multicast_hold(
     mc_mcast_group: str = "224.0.2.60",
     mc_mcast_port: int = 4445,
@@ -81,8 +85,8 @@ def mc_lan_multicast_hold(
         "4sl", socket.inet_aton(mc_mcast_group), socket.INADDR_ANY
     )
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
-    already_holded_multicast.set()  
-    
+    already_holded_multicast.set()
+
     while True:
         with suppress(OSError):
             sock.recvfrom(1024)
@@ -108,7 +112,9 @@ class CodeEventHandler(FileSystemEventHandler):
         self.last_updated_time = -1
 
     def on_modified(self, event):  # noqa: ARG002
-        if time.time() - self.last_updated_time < 0.1: # ? 说的啥 noqa是什么 ARG002又是
+        if (
+            time.time() - self.last_updated_time < 0.1
+        ):  # ? 说的啥 noqa是什么 ARG002又是
             return
         reload()
 

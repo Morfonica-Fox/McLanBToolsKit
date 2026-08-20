@@ -24,11 +24,12 @@ import pydivert
 
 import mc_lanb_advtools as utils
 
-script_dir = Path(__file__).parent.resolve() # 支持Embedding版本Python! 
-sys.path.insert(0, str(script_dir)) # Embedding版Python默认不从脚本所在目录导入库 所以要加这个
-# [fix] 修复 python 3.12.x 下无法从源码所在目录导入库的问题
+script_dir = Path(__file__).parent.resolve()  # 支持Embedding版本Python!
+sys.path.insert(0, str(script_dir))  # Embedding版默认不从脚本所在目录导入库
+# 是不是要把上面的import移下来? -- Cbscfe
 
 kept_data: dict  # 用于给解释器提示存在这个变量 如果删除会导致静态分析报错
+# 我的意思是为什么要这样写，你用到这个写法就说你的设计有点问题 -- Cbscfe
 
 banned_ips = {"26.19.87.179"}
 
