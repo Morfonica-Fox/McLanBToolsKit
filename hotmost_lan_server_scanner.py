@@ -32,6 +32,7 @@ from mc_lanb_advtools import (
     parse_mc_style,
 )
 from threadingsafe_structs import *
+from mc_lanb_firewall import start_mcast_hold_daemon, already_holded_multicast
 
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
@@ -236,8 +237,9 @@ def advance_style_top_server(
 \033[1;48;2;220;0;0m\033[38;2;255;255;255m║\033[0m \033[1;38;2;255;172;0m{player_count} players online, sample: {[player.name for player in player_sample]}\033[0m
 """
 
+start_mcast_hold_daemon()
+already_holded_multicast.wait()
 
-ad_banned_ip = {b"26.146.37.18"}
 print_res = []
 # de_repeat = set()
 while True:
@@ -258,8 +260,6 @@ while True:
         server_obj,
         (player_count, player_sample),
     ) in print_res:
-        if src_ip in ad_banned_ip:
-            continue
         if player_sample is None:
             continue
         try:
