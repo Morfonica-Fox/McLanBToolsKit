@@ -241,6 +241,8 @@ start_mcast_hold_daemon()
 already_holded_multicast.wait()
 
 print_res = []
+players_delta_max = 256
+block_server_ignore_sample_count = 10
 # de_repeat = set()
 while True:
     sys.stdout.buffer.write(b"\033[H\033[2J\033[3J")
@@ -261,6 +263,8 @@ while True:
         (player_count, player_sample),
     ) in print_res:
         if player_sample is None:
+            continue
+        if player_count - len(player_sample) > players_delta_max and len(player_sample) < block_server_ignore_sample_count:
             continue
         try:
             server_addr = src_ip.decode("utf-8") + ":" + port
