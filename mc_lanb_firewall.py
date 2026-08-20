@@ -20,31 +20,20 @@ import sys
 import threading
 import time
 from contextlib import suppress
-from pathlib import Path  # TODO
+from pathlib import Path
 from typing import NoReturn
 
 import pydivert
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
+script_dir = Path(__file__).parent.resolve() # 支持Embedding版本Python! 
+sys.path.insert(0, str(script_dir)) # Embedding版Python默认不从脚本所在目录导入库 所以要加这个
 import mc_lanb_cond
 from mc_lanb_advtools import *
 
 ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
-
 mc_lanb_cond.kept_data = {}
-
-# os.system(os.path.dirname(__file__))
-# script_dir = Path(__file__).resolve().parent
-# if str(script_dir) not in sys.path:
-#    sys.path.insert(0, str(script_dir))
-# [fix] 修复 python 3.12.x 下无法从源码所在目录导入库的问题
-# 不要乱删逻辑我求你了 跑一下再push
-#
-# 你自己IDE和项目管理有问题不要来乱动这个代码
-# 不要乱动执行位置
-# -- Cbscfe
-
 
 def install_whl_package(whl_filename: str) -> bool:
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -77,6 +66,7 @@ def enable_vt_console() -> bool:
         return not kernel32.SetConsoleMode(h, new_mode)
 
 
+already_holded_multicast = threading.Event()
 def mc_lan_multicast_hold(
     mc_mcast_group: str = "224.0.2.60",
     mc_mcast_port: int = 4445,
@@ -91,7 +81,8 @@ def mc_lan_multicast_hold(
         "4sl", socket.inet_aton(mc_mcast_group), socket.INADDR_ANY
     )
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
-
+    already_holded_multicast.set()  
+    
     while True:
         with suppress(OSError):
             sock.recvfrom(1024)
@@ -147,4 +138,5 @@ def main():
 enable_vt_console()
 if __name__ == "__main__":
     start_mcast_hold_daemon()
+    already_holded_multicast.wait()
     main()
