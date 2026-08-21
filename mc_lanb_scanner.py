@@ -1,12 +1,12 @@
-#Copyright (c) [2026] [Morfonica_Fox]
-#[McLanBToolsKit] is licensed under Mulan PubL v2.
-#You can use this software according to the terms and conditions of the Mulan PubL v2.
-#You may obtain a copy of Mulan PubL v2 at:
+# Copyright (c) [2026] [Morfonica_Fox]
+# [McLanBToolsKit] is licensed under Mulan PubL v2.
+# You can use this software according to the terms and conditions of the Mulan PubL v2.
+# You may obtain a copy of Mulan PubL v2 at:
 #         http://license.coscl.org.cn/MulanPubL-2.0
-#THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
-#EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
-#MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
-#See the Mulan PubL v2 for more details.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+# EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+# MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+# See the Mulan PubL v2 for more details.
 
 import asyncio
 import ctypes
@@ -15,7 +15,6 @@ import sys
 import threading
 import time
 from datetime import datetime, timezone
-import sys
 from pathlib import Path
 
 import pydivert
@@ -31,8 +30,8 @@ from mc_lanb_advtools import (
     parse_mc_lanpacket,
     parse_mc_style,
 )
+from mc_lanb_firewall import already_holded_multicast, start_mcast_hold_daemon
 from threadingsafe_structs import *
-from mc_lanb_firewall import start_mcast_hold_daemon, already_holded_multicast
 
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
@@ -127,7 +126,9 @@ def log_servers():
     ) as wd:
         wdobj = wd
         for packet in wd:
-            motd, port, fml_data = parse_mc_lanpacket(auto_decode_bytes(packet.payload)[0])
+            motd, port, fml_data = parse_mc_lanpacket(
+                auto_decode_bytes(packet.payload)[0]
+            )
             # decoded_motd, coding = auto_decode_bytes(motd, allow_encodings=('utf-8', 'gbk', 'ascii'))
             # styled_motd          = parse_mc_style(decoded_motd)
             src_ip, dst_ip = packet.src_addr, packet.dst_addr
@@ -237,6 +238,7 @@ def advance_style_top_server(
 \033[1;48;2;220;0;0m\033[38;2;255;255;255m║\033[0m \033[1;38;2;255;172;0m{player_count} players online, sample: {[player.name for player in player_sample]}\033[0m
 """
 
+
 start_mcast_hold_daemon()
 already_holded_multicast.wait()
 
@@ -264,7 +266,10 @@ while True:
     ) in print_res:
         if player_sample is None:
             continue
-        if player_count - len(player_sample) > players_delta_max and len(player_sample) < block_server_ignore_sample_count:
+        if (
+            player_count - len(player_sample) > players_delta_max
+            and len(player_sample) < block_server_ignore_sample_count
+        ):
             continue
         try:
             server_addr = src_ip.decode("utf-8") + ":" + port

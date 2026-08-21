@@ -207,7 +207,7 @@ def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
         wd_object.send(packet)
 
 
-def will_update(timestamp: float):
+def will_update(timestamp: float):  # noqa: ARG001
     # try:
     # kept_data['packet_logger_term'].free()
     # del kept_data['packet_logger_term']  # 清理终端对象
