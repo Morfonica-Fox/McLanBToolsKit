@@ -80,9 +80,8 @@ def qpc_to_filetime(qpc_tick: int) -> int:
     return FT_ANCHOR + delta_100ns
 
 
-FILETIME_UNIX_OFFSET = (
-    11644473600 * 10_000_000
-)  # 1601‑01‑01 →1970‑01‑01，100ns单位
+# 1601‑01‑01 →1970‑01‑01，100ns单位
+FILETIME_UNIX_OFFSET = 11644473600 * 10_000_000
 
 
 def filetime_to_unix_ns(ft_100ns: int) -> int:
@@ -109,36 +108,27 @@ scan_delay_per_server = int(12 * qpc_freq)
 # struct of player_info: [player_]
 
 
-def hash_server(
-    src_ip: bytes | str,
-    port: bytes,
-) -> tuple:
-    return (src_ip.encode("utf-8") if type(src_ip) == str else src_ip), port
-
-
 def log_servers():
     global wdobj, servers, servers_lock
-    serversL = servers
-    # xxxL: localvar xxx
-    # 局部变量访问加速
+    servers_localvar = servers
     with pydivert.WinDivert(
-        "inbound and udp and udp.DstPort == 4445", flags=pydivert.Flag.SNIFF
+        "inbound and udp and udp.DstPort == 4445",
+        flags=pydivert.Flag.SNIFF,
     ) as wd:
         wdobj = wd
         for packet in wd:
-            motd, port, fml_data = parse_mc_lanpacket(
-                auto_decode_bytes(packet.payload)[0]
-            )
-            # decoded_motd, coding = auto_decode_bytes(motd, allow_encodings=('utf-8', 'gbk', 'ascii'))
-            # styled_motd          = parse_mc_style(decoded_motd)
-            src_ip, dst_ip = packet.src_addr, packet.dst_addr
+            decoded_packet = auto_decode_bytes(packet.payload)[0]  # pyright: ignore[reportArgumentType]
+            motd, port, _ = parse_mc_lanpacket(decoded_packet)
+            src_ip, _ = packet.src_addr, packet.dst_addr
             timestamp = packet._wd_addr.Timestamp
 
             if not port.isdigit():
                 continue
+            if src_ip is None:
+                continue
 
-            server = serversL.get(
-                hash_server(src_ip, port),
+            server = servers_localvar.get(
+                hash((src_ip, port)),
                 [
                     timestamp,
                     -1,
@@ -149,7 +139,7 @@ def log_servers():
             )
             server[0] = timestamp
             server[2] = motd
-            serversL.put(hash_server(src_ip, port), server)
+            servers_localvar.put(hash((src_ip, port)), server)
 
 
 log_servers_thread = threading.Thread(target=log_servers, daemon=True)
@@ -158,11 +148,11 @@ log_servers_thread.start()
 
 def cleanup_servers():
     global servers
-    serversL = servers
+    servers_localvar = servers
     last_bucket_index = 0
     will_delete_servers_hashes = []
     while True:
-        last_bucket_index, items, geted = serversL.items_inaccurate(
+        last_bucket_index, items, geted = servers_localvar.items_inaccurate(
             last_bucket_index
         )
         if not geted:
@@ -180,7 +170,7 @@ def cleanup_servers():
                 if now_timestamp - timestamp > timeout_server_offline:
                     will_delete_servers_hashes.append(server_hash)
             for server_hash in will_delete_servers_hashes:
-                serversL.rmv_inaccurate(server_hash)
+                servers_localvar.rmv_inaccurate(server_hash)
         # except: pass
         finally:
             pass
