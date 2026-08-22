@@ -134,7 +134,7 @@ def main():
 
     reload()
 
-    with pydivert.WinDivert(filter_str) as w:
+    with pydivert.WinDivert(filter_str, priority=30000) as w:
         while True:
             pkt: pydivert.Packet = w.recv()
             # with suppress(Exception):

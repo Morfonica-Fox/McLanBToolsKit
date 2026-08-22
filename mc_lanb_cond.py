@@ -183,7 +183,9 @@ def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
         or ip_counters[src_ip].get_per_time(60.0) > ip_max_per_min
     ):
         result = False
-
+    if port < 0 or port > 65535:
+        result = False
+    
     p_info = (
         f"""\
 \033[0;96m{timestamp} \
