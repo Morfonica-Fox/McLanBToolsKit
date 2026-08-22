@@ -20,8 +20,6 @@
 - **Bisect 滑动窗口**：基于 `bisect` + `deque` 的 O(log n) 时间序列计数器，精确到毫秒
 - **代码热重载**：保存 `mc_lanb_cond.py` 后自动重载处理逻辑和依赖，无需重启进程
 - **MOTD 样式解析**：完整支持 Minecraft 颜色代码（§0~§f）、格式代码（§l/§o/§n/§m）、Bedrock 扩展色（§g~§w）和真彩色（§x） (Note: 默认全真彩色ANSI输出 所以不受控制台调整颜色主题影响)
-- **双终端模式**：自动检测 `rich` 库并切换 Rich 渲染 / ANSI 转义序列输出
-- **自动提权**：通过 `elevate` 自动请求管理员权限
 - **Forge 兼容**：自动修正目标地址为 255.255.255.255，修复 (Neo)Forge 客户端收不到广播包的问题
 - **组播保活**：自动加入组播组，确保局域网内客户端能发现服务器，修复无客户端主动加入组播组时 部分os默认丢弃组播包的问题
 
@@ -42,15 +40,18 @@
 | pydivert | ≥ 2.1.0 | WinDivert Python 绑定 |
 | charset-normalizer | ≥ 2.0.0 | 自动字符集检测 |
 | watchdog | ≥ 6.0.0 | 文件变更监控（热重载） |
-| elevate | * | 自动管理员提权 |
+| atomicx | ≥ 1.0.0 | 用于处理多线程并发和锁机制 |
 
 ### 已知稳定环境
 
-**环境 A（推荐）**
-- PyPy 3.11 + pydivert 2.1.0 + charset-normalizer 3.4.7 + watchdog 6.0.0
+**环境 A**
+- PyPy 3.11 + pydivert 2.1.0 + charset-normalizer 3.4.7 + watchdog 6.0.0 + atomicx 1.0.0
 
-**环境 B**
-- CPython 3.11 + pydivert 3.1.2 + charset-normalizer 3.4.7 + watchdog 6.0.0
+**环境 B（推荐）**
+- CPython 3.12 + pydivert 3.1.2 + charset-normalizer 3.4.7 + watchdog 6.0.0 + atomicx 1.0.0
+
+**环境 C**
+- CPython 3.11 + pydivert 3.1.2 + charset-normalizer 3.4.7 + watchdog 6.0.0 + atomicx 1.0.0
 
 ### 自定义拦截规则
 
@@ -114,20 +115,23 @@ python mc_lanb_firewall.py
 
 # 运行广播器
 python mc_server_udp_broadcast.py
-```
 
-防火墙首次运行会自动请求管理员权限。
+# 运行扫描器（需管理员权限）
+python mc_lanb_scanner.py
+```
 
 ## 项目结构
 
 ```
-McLanBToolsKit.rich/
+McLanBToolsKit/
 ├── mc_lanb_firewall.py         # 防火墙入口，WinDivert 抓包 + 热重载调度
 ├── mc_lanb_cond.py             # 拦截条件模块，速率计数器 + 包处理逻辑
 ├── mc_lanb_advtools.py         # 工具模块，字符集检测 + 协议解析 + 样式渲染
+├── mc_lanb_scanner.py          # 扫描器入口，检测局域网内所有 Minecraft 服务器
 ├── mc_server_udp_broadcast.py  # 广播器入口，组播发送 + 配置热重载
 ├── mc_servers_config.py        # 广播器服务器配置文件
-└── pyproject.toml              # 项目配置（格式化、Lint）
+├── pyproject.toml              # 项目配置（格式化、Lint）
+└── ......
 ```
 
 ## 原理简述
