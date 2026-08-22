@@ -270,8 +270,8 @@ while True:
         server_obj,
         (player_count, player_sample),
     ) in print_res:
-        #if player_count > players_maxium_without_sample and len(player_sample) <= sample_needed_trust_really:
-        #    continue
+        if player_count > players_maxium_without_sample and len(player_sample) <= sample_needed_trust_really:
+            continue
         try:
             server_addr = src_ip.decode('utf-8') + ":" + port
             server_addr += " " * max(0, 21 - len(server_addr))
