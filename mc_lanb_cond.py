@@ -122,7 +122,8 @@ def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
     )
     coding = f"{coding.lower(): <5}"
     src_ip, dst_ip = packet.src_addr, packet.dst_addr
-    motd, port, fml_data = utils.parse_mc_lanpacket(original_data)
+    try:    motd, port, fml_data = utils.parse_mc_lanpacket(original_data)
+    except: return
 
     broadcast_counters = kept_data.setdefault("broadcast_counters", {})
     ip_counters = kept_data.setdefault("ip_counters", {})
