@@ -1,19 +1,8 @@
-# Copyright (c) [2026] [Morfonica_Fox]
-# [McLanBToolsKit] is licensed under Mulan PubL v2.
-# You can use this software according to the terms and conditions of the Mulan PubL v2.
-# You may obtain a copy of Mulan PubL v2 at:
-#         http://license.coscl.org.cn/MulanPubL-2.0
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
-# EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
-# MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
-# See the Mulan PubL v2 for more details.
-
 import functools
 import threading
 from typing import Callable, Self
 
 import atomicx
-
 
 class concurrent_dict:  # noqa: N801
     def __init__(
@@ -46,11 +35,10 @@ class concurrent_dict:  # noqa: N801
         return wrapfunc
 
     def change_capacity(self, capacity: int):
-        if self.capacity == capacity:  # DCL 检查喵
-            return  # 虽然感觉没什么用但是写了更规范喵
-
         # 需要对这一段到底在干什么做出解释，我不明白 -- Cbscfe
         with self._lock_on_change:
+            if self.capacity == capacity:  # DCL 检查喵
+                return  # 虽然感觉没什么用但是写了更规范喵
             while self._ops_executing.load() > 0:
                 pass
             self._is_changeing.store(True)
@@ -94,7 +82,7 @@ class concurrent_dict:  # noqa: N801
         suffix = h & ((1 << self.capacity) - 1)
         with self._buckets_locks[suffix]:
             del self._buckets[suffix][key]  # 有可能抛异常喵
-        self._entry_count.dec()
+        self._entry_count.dec() # 如果键存在 删除后减少合理 如果键不存在 上一步报错不会执行到
 
     @_non_atomised_wrapper
     def rmv_slient(self, key):
@@ -156,7 +144,7 @@ class concurrent_dict:  # noqa: N801
 
     @_non_atomised_wrapper
     def clear(self):
-        self._entry_count.set(0)  # 这里IDE报错了是正常的吗 -- Cbscfe
+        self._entry_count.set(0)
         state = [False] * (1 << self.capacity)
         while True:
             for index, (bucket, lock) in enumerate(

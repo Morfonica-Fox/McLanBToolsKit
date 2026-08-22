@@ -1,12 +1,12 @@
-# Copyright (c) [2026] [Morfonica_Fox]
-# [McLanBToolsKit] is licensed under Mulan PubL v2.
-# You can use this software according to the terms and conditions of the Mulan PubL v2.
-# You may obtain a copy of Mulan PubL v2 at:
+#Copyright (c) [2026] [Morfonica_Fox]
+#[McLanBToolsKit] is licensed under Mulan PubL v2.
+#You can use this software according to the terms and conditions of the Mulan PubL v2.
+#You may obtain a copy of Mulan PubL v2 at:
 #         http://license.coscl.org.cn/MulanPubL-2.0
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
-# EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
-# MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
-# See the Mulan PubL v2 for more details.
+#THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+#EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+#MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+#See the Mulan PubL v2 for more details.
 
 import asyncio
 import ctypes
@@ -15,6 +15,7 @@ import sys
 import threading
 import time
 from datetime import datetime, timezone
+import sys
 from pathlib import Path
 
 import pydivert
@@ -30,9 +31,7 @@ from mc_lanb_advtools import (
     parse_mc_lanpacket,
     parse_mc_style,
 )
-from mc_lanb_firewall import already_holded_multicast, start_mcast_hold_daemon
 from threadingsafe_structs import *
-from debugtools import *
 
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
@@ -81,8 +80,9 @@ def qpc_to_filetime(qpc_tick: int) -> int:
     return FT_ANCHOR + delta_100ns
 
 
-# 1601‑01‑01 →1970‑01‑01，100ns单位
-FILETIME_UNIX_OFFSET = 11644473600 * 10_000_000
+FILETIME_UNIX_OFFSET = (
+    11644473600 * 10_000_000
+)  # 1601‑01‑01 →1970‑01‑01，100ns单位
 
 
 def filetime_to_unix_ns(ft_100ns: int) -> int:
@@ -106,9 +106,10 @@ qpc_freq = get_qpc_frequency()
 timeout_server_offline = int(4.5 * qpc_freq)
 scan_delay_per_server = int(12 * qpc_freq)
 # struct of server: hash: [timestamp, last_scan_timestamp, motd, server_obj, player_info]
-# struct of player_info: [player_count, player_sample]
+# struct of player_info: [player_]
 
-def hash_server( # 如果后续要更改服务器分辨规则直接改这个
+
+def hash_server(
     src_ip: bytes | str,
     port: bytes,
 ) -> tuple:
@@ -117,54 +118,49 @@ def hash_server( # 如果后续要更改服务器分辨规则直接改这个
 
 def log_servers():
     global wdobj, servers, servers_lock
-    servers_localvar = servers
+    serversL = servers
+    # xxxL: localvar xxx
+    # 局部变量访问加速
     with pydivert.WinDivert(
-        "inbound and udp and udp.DstPort == 4445",
-        flags=pydivert.Flag.SNIFF,
+        "inbound and udp and udp.DstPort == 4445", flags=pydivert.Flag.SNIFF
     ) as wd:
         wdobj = wd
         for packet in wd:
-            decoded_packet = auto_decode_bytes(packet.payload)[0]  # pyright: ignore[reportArgumentType]
-            try:    motd, port, _ = parse_mc_lanpacket(decoded_packet)
-            except: continue
-            src_ip, _ = packet.src_addr, packet.dst_addr
+            motd, port, fml_data = parse_mc_lanpacket(auto_decode_bytes(packet.payload)[0])
+            # decoded_motd, coding = auto_decode_bytes(motd, allow_encodings=('utf-8', 'gbk', 'ascii'))
+            # styled_motd          = parse_mc_style(decoded_motd)
+            src_ip, dst_ip = packet.src_addr, packet.dst_addr
             timestamp = packet._wd_addr.Timestamp
 
-            if src_ip is None:
-                continue
             if not port.isdigit():
-                server_obj_pre_builded = None
-            elif (p := int(port)) > 65535 or p < 0:
-                server_obj_pre_builded = None
-            else:
-                server_obj_pre_builded = JavaServer(host=src_ip, port=int(port))
+                continue
 
-            server = servers_localvar.get(
+            server = serversL.get(
                 hash_server(src_ip, port),
                 [
                     timestamp,
                     -1,
                     motd,
-                    server_obj_pre_builded,
+                    JavaServer(host=src_ip, port=int(port)),
                     [0, []],
                 ],
             )
             server[0] = timestamp
             server[2] = motd
-            servers_localvar.put(hash_server(src_ip, port), server)
+            serversL.put(hash_server(src_ip, port), server)
 
 
-log_servers_thread = threading.Thread(target=wrapper_core_thread, args=(log_servers, 'log servers thread'), daemon=True)
+log_servers_thread = threading.Thread(target=log_servers, daemon=True)
 log_servers_thread.start()
 
 
 def cleanup_servers():
     global servers
-    servers_localvar = servers
+    serversL = servers
     last_bucket_index = 0
     will_delete_servers_hashes = []
     while True:
-        last_bucket_index, items, geted = servers_localvar.items_inaccurate(
+        last_bucket_index, items, geted = serversL.items_inaccurate(
             last_bucket_index
         )
         if not geted:
@@ -182,14 +178,14 @@ def cleanup_servers():
                 if now_timestamp - timestamp > timeout_server_offline:
                     will_delete_servers_hashes.append(server_hash)
             for server_hash in will_delete_servers_hashes:
-                servers_localvar.rmv_inaccurate(server_hash)
+                serversL.rmv_inaccurate(server_hash)
         # except: pass
         finally:
             pass
 
 
-cleanup_servers_thread = threading.Thread(target=wrapper_core_thread, args=(cleanup_servers, 'cleanup servers thread'), daemon=True)
-#cleanup_servers_thread.start()
+cleanup_servers_thread = threading.Thread(target=cleanup_servers, daemon=True)
+cleanup_servers_thread.start()
 
 
 async def scan_server(server_info_ref: list[int, list[str]]):
@@ -197,8 +193,7 @@ async def scan_server(server_info_ref: list[int, list[str]]):
     server_obj: JavaServer = server_info_ref[3]
     status = await server_obj.async_status()
     player_info_ref[0] = status.players.online
-    if status.players.sample is not None: 
-        player_info_ref[1] = status.players.sample
+    player_info_ref[1] = status.players.sample
     server_info_ref[1] = get_raw_qpc()
 
 
@@ -227,7 +222,7 @@ def scan_servers_wrapper():
 
 
 async_scan_servers_thread = threading.Thread(
-    target=wrapper_core_thread, args=(scan_servers_wrapper, 'async scan servers thread'), daemon=True
+    target=scan_servers_wrapper, daemon=True
 )
 async_scan_servers_thread.start()
 
@@ -242,25 +237,18 @@ def advance_style_top_server(
 """
 
 
-start_mcast_hold_daemon()
-already_holded_multicast.wait()
-
+ad_banned_ip = {b"26.146.37.18"}
 print_res = []
-players_maxium_without_sample = 1024 # sample数量不达标时允许的最大玩家数
-sample_needed_trust_really = 10
-#debug_last_server_count = 0
+# de_repeat = set()
 while True:
-    print_res.clear()
-    for k, v in servers.to_dict().items():
-        print_res.append((k, v))
-    print_res.sort(key=lambda x: x[1][4][0], reverse=True)
-    #if debug_last_server_count > len(print_res):
-    #    with open('debug_stack.txt', 'wb') as f:
-    #        dump_all_thread_stacks(f)
-    #    log_debug_exception('servers count decreased!')
-    #debug_last_server_count = len(print_res)
-    
     sys.stdout.buffer.write(b"\033[H\033[2J\033[3J")
+    print_res.clear()
+    # de_repeat.clear()
+    for k, v in servers.to_dict().items():
+        # if k in de_repeat: continue
+        print_res.append((k, v))
+        # de_repeat.add(k)
+    print_res.sort(key=lambda x: x[1][4][0], reverse=True)
 
     is_first = True
     for (src_ip, port), (
@@ -270,15 +258,17 @@ while True:
         server_obj,
         (player_count, player_sample),
     ) in print_res:
-        #if player_count > players_maxium_without_sample and len(player_sample) <= sample_needed_trust_really:
-        #    continue
+        if src_ip in ad_banned_ip:
+            continue
+        if player_sample is None:
+            continue
         try:
-            server_addr = src_ip.decode('utf-8') + ":" + port
+            server_addr = src_ip.decode("utf-8") + ":" + port
             server_addr += " " * max(0, 21 - len(server_addr))
             if is_first:
                 sys.stdout.buffer.write(
                     advance_style_top_server(
-                        src_ip.decode('utf-8'),
+                        src_ip,
                         port,
                         last_scan_timestamp,
                         motd,
@@ -289,13 +279,14 @@ while True:
                 is_first = False
             else:
                 sys.stdout.buffer.write(
-                    f"{server_addr} - {parse_mc_style(motd)} - {player_count} - {[player.name for player in player_sample]}\n".encode(
+                    f"{server_addr}- {parse_mc_style(motd)} - {player_count} - {[player.name for player in player_sample]}\n".encode(
                         "utf-8"
                     )
                 )
         # except: pass
-        finally: pass
+        finally:
+            pass
 
     sys.stdout.buffer.flush()
     sys.stdout.flush()
-    time.sleep(0.1)
+    time.sleep(0.05)
