@@ -15,7 +15,6 @@ import sys
 import threading
 import time
 from datetime import datetime, timezone
-import sys
 from pathlib import Path
 
 import pydivert

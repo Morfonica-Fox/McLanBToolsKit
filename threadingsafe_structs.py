@@ -142,6 +142,7 @@ class concurrent_dict:  # noqa: N801
                 break
         return res
 
+
     @_non_atomised_wrapper
     def clear(self):
         self._entry_count.set(0)

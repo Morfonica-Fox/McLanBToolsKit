@@ -67,16 +67,16 @@ class PPTCounter:
         idx = bisect.bisect_left(self.records, start_time)
         return len(self.records) - idx
 
-    def get_all(self) -> list:
+    def get_all(self) -> deque:
         self._clean_expired()
-        return len(self.records)
+        return self.records
 
     def clear(self):
         self.records.clear()
         self.first_trig = None
 
 
-def color_gradient(val: int, max_val: int, pad_ex: int = 0) -> str:
+def color_gradient(val: int, max_val: int, pad_ex: int = 2) -> str:
     padder = " " * (len(str(max_val)) - len(str(val)) + pad_ex)
 
     if val == 0:
@@ -122,8 +122,10 @@ def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
     )
     coding = f"{coding.lower(): <5}"
     src_ip, dst_ip = packet.src_addr, packet.dst_addr
-    try:    motd, port, fml_data = utils.parse_mc_lanpacket(original_data)
-    except: return
+    try:
+        motd, port, fml_data = utils.parse_mc_lanpacket(original_data)
+    except ValueError:
+        return
 
     broadcast_counters = kept_data.setdefault("broadcast_counters", {})
     ip_counters = kept_data.setdefault("ip_counters", {})
@@ -183,11 +185,9 @@ def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
         or ip_counters[src_ip].get_per_time(60.0) > ip_max_per_min
     ):
         result = False
-    if not port.isdigit():
+    if not (port.isdigit() and 0 <= int(port) <= 65535):
         result = False
-    elif (p := int(port)) < 0 or p > 65535:
-        result = False
-    
+
     p_info = (
         f"""\
 \033[0;96m{timestamp} \
@@ -200,13 +200,13 @@ def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
 \033[0;1;94m{f_dst_ip} \
 \033[0;1;35m{f_port} \
 \033[0;31m{f_coding} """
-        + ("\033[0;92m[Allow →]" if result else "\033[0;91m[Block ✘]")
+        + ("\033[0;92m[Allowed →]" if result else "\033[0;91m[Blocked ✘]")
         + f"\033[0m {f_motd}\033[0m"
     )
 
-    packet.dst_addr = (
-        "255.255.255.255"  # 修复 (Neo)Forge 客户端收不到广播包的问题
-    )
+    # 修复 (Neo)Forge 客户端收不到广播包的问题
+    packet.dst_addr = "255.255.255.255"
+
     print(p_info)
     if result:
         wd_object.send(packet)
