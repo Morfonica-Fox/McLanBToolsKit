@@ -19,6 +19,7 @@ import sys
 import time
 from collections import deque
 from pathlib import Path
+import os
 
 import pydivert
 
@@ -187,6 +188,8 @@ def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
         result = False
     if not (port.isdigit() and 0 <= int(port) <= 65535):
         result = False
+    if src_ip in banned_ips:
+        result = False
 
     p_info = (
         f"""\
@@ -227,3 +230,11 @@ def on_updated(timestamp: float):  # noqa: ARG001
     # if kept_data.get('packet_logger_term', None) is None:
     # kept_data['packet_logger_term'] = Terminal('Mc LanB Firewall: Packet Logger Terminal')
     # kept_data['packet_logger_term'].alloc(configs={'enable_input': False})
+
+
+if not os.path.exists("./temp_ip_blacklist.txt"):
+    with open("./temp_ip_blacklist.txt", "w") as f:
+        f.write("")
+
+with open("./temp_ip_blacklist.txt", "r", encoding='ascii') as f:
+    blacklist = set([f.strip() for f in f.readlines()])
