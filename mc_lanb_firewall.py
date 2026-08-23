@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import ctypes
 import importlib
-import os
 import socket
 import struct
 import subprocess
@@ -29,22 +28,22 @@ from watchdog.observers import Observer
 
 script_dir = Path(__file__).parent.resolve()  # 支持Embedding版本Python!
 sys.path.insert(0, str(script_dir))  # Embedding版默认不从脚本所在目录导入库
+
 import mc_lanb_cond
 from mc_lanb_advtools import *
 
-
 ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
-mc_lanb_cond.kept_data = {}
+# mc_lanb_cond.kept_data = {}
 
 
 def install_whl_package(whl_filename: str) -> bool:
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    whl_path = os.path.join(current_dir, whl_filename)
-    if not os.path.exists(whl_path):
+    current_dir = Path(__file__).resolve().parent
+    whl_path = current_dir / whl_filename
+    if not whl_path.exists():
         return False
 
     try:
-        subprocess.check_call(
+        subprocess.check_call(  # noqa: S603
             [sys.executable, "-m", "pip", "install", whl_path],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.STDOUT,
@@ -102,7 +101,7 @@ def reload():
     original_kept_data = mc_lanb_cond.kept_data
     mc_lanb_cond.will_update(time.time())
     mc_lanb_cond = importlib.reload(mc_lanb_cond)
-    mc_lanb_cond.kept_data = original_kept_data
+    mc_lanb_cond.kept_data = original_kept_data  # pyright: ignore[reportAttributeAccessIssue]
     mc_lanb_cond.on_updated(time.time())
     # cb虽然但是不要乱动命名空间注入啊 或者调试一下:( 不调试就提交是不好的习惯
 
@@ -129,7 +128,7 @@ def main():
 
     obs = Observer()
     hdr = CodeEventHandler()
-    obs.schedule(hdr, os.path.dirname(__file__), recursive=False)
+    obs.schedule(hdr, str(Path(__file__).parent), recursive=False)
     obs.start()
 
     reload()

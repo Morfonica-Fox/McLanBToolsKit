@@ -26,19 +26,19 @@ import mc_lanb_advtools as utils
 
 script_dir = Path(__file__).parent.resolve()  # 支持Embedding版本Python!
 sys.path.insert(0, str(script_dir))  # Embedding版默认不从脚本所在目录导入库
-# 是不是要把上面的import移下来? -- Cbscfe
 
-kept_data: dict  # 用于给解释器提示存在这个变量 如果删除会导致静态分析报错
-# 我的意思是为什么要这样写，你用到这个写法就说你的设计有点问题 -- Cbscfe
 
 banned_ips = {"26.19.87.179"}
+kept_data = {
+    "ppt_counter:deques": {},
+    "broadcast_counters": {},
+    "ip_counters": {},
+}
 
 
 class PPTCounter:
     def __init__(self, ctr_id, max_record_time: float = 60.0):
-        kept_data.setdefault("ppt_counter:deques", {})
         kept_data["ppt_counter:deques"].setdefault(ctr_id, deque())
-
         self.max_record_time = max_record_time
         self.records = kept_data["ppt_counter:deques"][ctr_id]
         self.first_trig = None
@@ -127,8 +127,8 @@ def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
     except ValueError:
         return
 
-    broadcast_counters = kept_data.setdefault("broadcast_counters", {})
-    ip_counters = kept_data.setdefault("ip_counters", {})
+    broadcast_counters = kept_data["broadcast_counters"]
+    ip_counters = kept_data["ip_counters"]
 
     sid = (src_ip, port, dst_ip)
 
@@ -220,7 +220,7 @@ def will_update(timestamp: float):  # noqa: ARG001
     print("will update", time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
 
-def on_updated(timestamp: float):
+def on_updated(timestamp: float):  # noqa: ARG001
     global utils
     print("on updated", time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
     utils = importlib.reload(utils)
