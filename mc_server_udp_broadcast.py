@@ -45,11 +45,11 @@ def load_servers_from_conf(retry_times: int = 5):
         raise ImportError("配置文件无法加载!")
     try:
         msc = {}
-        with open("mc_servers_config.py", "r", encoding="utf-8") as f:
+        with open("mc_servers_config.py", "r", encoding="utf-8") as f:  # noqa: PTH123
             exec(f.read(), msc, msc)
         print("[+] 加载配置文件完成!")
     except Exception:
-        load_servers_from_conf(retry_times=retry_times - 1)
+        load_servers_from_conf(retry_times - 1)
 
 
 class ConfFlushHandler(FileSystemEventHandler):

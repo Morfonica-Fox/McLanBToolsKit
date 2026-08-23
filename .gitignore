@@ -37,5 +37,8 @@ WinDivert*.sys
 .env
 .env.local
 
+# 配置文件
+temp_ip_blacklist.txt
+
 # 被抛弃的配置文件
 broadcast_config.toml

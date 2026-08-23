@@ -167,7 +167,7 @@ def parse_mc_style(
         else COLOR_MAPPINGS_ANSI.copy()
     )
     if always_hex_color:
-        for key in color_mappings.keys():
+        for key in color_mappings:
             hexstr = color_mappings[key]
             r, g, b = (
                 int(hexstr[:2], 16),

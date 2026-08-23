@@ -9,7 +9,7 @@ def wrapper_core_thread(func, thread_name):
     try:
         func()
     finally:
-        with open("debug_stack.txt", "wb") as f:
+        with open("debug_stack.txt", "wb") as f:  # noqa: PTH123
             dump_all_thread_stacks(f)
         log_debug_exception(f"{thread_name} exited!")
 
@@ -21,9 +21,7 @@ def dump_all_thread_stacks(output_buffer: BinaryIO = sys.stdout.buffer):
     """
     output_buffer.write(f"======== DUMP ALL THREADS | Time: {threading.get_ident()} main tid ========\n".encode("utf-8"))  # fmt: skip
 
-    thread_map: dict[int, threading.Thread] = {
-        t.ident: t for t in threading.enumerate() if t.ident is not None
-    }
+    thread_map: dict[int, threading.Thread] = {t.ident: t for t in threading.enumerate() if t.ident is not None}  # fmt: skip
     # 获取所有线程的帧快照；注意：仅Python层，C阻塞时帧为旧状态
     thread_frames: dict[int, FrameType] = sys._current_frames()
 
@@ -62,9 +60,9 @@ def dump_all_thread_stacks(output_buffer: BinaryIO = sys.stdout.buffer):
             for k, v in current_frame.f_locals.items():
                 try:
                     rep = repr(v)
-                    output_buffer.write(f"        {k:<25} = {rep}\n".encode("utf-8"))  # fmt: skip
+                    output_buffer.write(f"\t\t{k:<25} = {rep}\n".encode("utf-8"))  # fmt: skip
                 except Exception as e:
-                    output_buffer.write(f"        {k:<25} = <repr failed: {e!r}>\n".encode("utf-8"))  # fmt: skip
+                    output_buffer.write(f"\t\t{k:<25} = <repr failed: {e!r}>\n".encode("utf-8"))  # fmt: skip
 
             # 全局变量
             output_buffer.write("      -- Globals:\n".encode("utf-8"))
@@ -73,9 +71,9 @@ def dump_all_thread_stacks(output_buffer: BinaryIO = sys.stdout.buffer):
                     continue
                 try:
                     rep = repr(v)
-                    output_buffer.write(f"        {k:<25} = {rep}\n".encode("utf-8"))  # fmt: skip
+                    output_buffer.write(f"\t\t{k:<25} = {rep}\n".encode("utf-8"))  # fmt: skip
                 except Exception as e:
-                    output_buffer.write(f"        {k:<25} = <repr failed: {e!r}>\n".encode("utf-8"))  # fmt: skip
+                    output_buffer.write(f"\t\t{k:<25} = <repr failed: {e!r}>\n".encode("utf-8"))  # fmt: skip
 
             current_frame = current_frame.f_back
 

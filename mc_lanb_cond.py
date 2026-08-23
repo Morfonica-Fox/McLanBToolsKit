@@ -19,7 +19,6 @@ import sys
 import time
 from collections import deque
 from pathlib import Path
-import os
 
 import pydivert
 
@@ -232,9 +231,9 @@ def on_updated(timestamp: float):  # noqa: ARG001
     # kept_data['packet_logger_term'].alloc(configs={'enable_input': False})
 
 
-if not os.path.exists("./temp_ip_blacklist.txt"):
-    with open("./temp_ip_blacklist.txt", "w") as f:
-        f.write("")
+temp_ip_blacklist_file = Path("./temp_ip_blacklist.txt")
+temp_ip_blacklist_file.touch()
 
-with open("./temp_ip_blacklist.txt", "r", encoding='ascii') as f:
+with temp_ip_blacklist_file.open("r", encoding="utf-8") as f:
     blacklist = set([f.strip() for f in f.readlines()])
+    # banned_ips？
