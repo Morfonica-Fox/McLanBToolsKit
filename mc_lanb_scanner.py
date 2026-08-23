@@ -164,12 +164,7 @@ def cleanup_servers():
     last_bucket_index = 0
     will_delete_servers_hashes = []
     while True:
-        last_bucket_index, items, geted = servers_localvar.items_inaccurate(
-            last_bucket_index
-        )
-        if not geted:
-            continue
-        try:
+        for bucket_items_snap in servers_localvar.items(inaccurate=True):
             will_delete_servers_hashes.clear()
             now_timestamp = get_raw_qpc()
             for server_hash, (
@@ -178,18 +173,17 @@ def cleanup_servers():
                 motd,
                 server_obj,
                 player_info,
-            ) in items:
+            ) in bucket_items_snap:
                 if now_timestamp - timestamp > timeout_server_offline:
                     will_delete_servers_hashes.append(server_hash)
             for server_hash in will_delete_servers_hashes:
-                servers_localvar.rmv_inaccurate(server_hash)
-        # except: pass
-        finally:
-            pass
+                servers_localvar.remove(server_hash, inaccurate=True, slient=True)
+            # except: pass
+            # finally: pass
 
 
 cleanup_servers_thread = threading.Thread(target=wrapper_core_thread, args=(cleanup_servers, 'cleanup servers thread'), daemon=True)
-#cleanup_servers_thread.start()
+cleanup_servers_thread.start()
 
 
 async def scan_server(server_info_ref: list[int, list[str]]):
@@ -204,22 +198,18 @@ async def scan_server(server_info_ref: list[int, list[str]]):
 
 async def scan_servers():
     global servers
-    serversL = servers
+    servers_localvar = servers
     tasks = []
     last_bucket_index = 0
     while True:
         tasks.clear()
-        last_bucket_index, items, geted = serversL.items_inaccurate(
-            last_bucket_index
-        )
-        if not geted:
-            continue
-        now_timestamp = get_raw_qpc()
-        for server_hash, server_info in items:
-            if now_timestamp - server_info[1] <= scan_delay_per_server:
-                continue
-            tasks.append(scan_server(server_info))
-        await asyncio.gather(*tasks, return_exceptions=True)
+        for bucket_items_snap in servers_localvar.items(inaccurate=True):
+            now_timestamp = get_raw_qpc()
+            for server_hash, server_info in bucket_items_snap:
+                if now_timestamp - server_info[1] <= scan_delay_per_server:
+                    continue
+                tasks.append(scan_server(server_info))
+            await asyncio.gather(*tasks, return_exceptions=True)
 
 
 def scan_servers_wrapper():
