@@ -163,6 +163,7 @@ class concurrent_dict:  # noqa: N801
                 break
         return res
 
+
     @_non_atomised_wrapper
     def clear(self):
         state = [False] * (1 << self.capacity)

@@ -84,6 +84,7 @@ PACKET_PATTERN = re.compile(
 
 IPType: TypeAlias = Literal["ipv4/v8", "ipv4", "ipv8", "ipv6", "unknown"]
 
+
 class ParsedPacket(NamedTuple):
     motd: str
     ad: str
@@ -160,21 +161,21 @@ def parse_mc_style(
     buf.write("")  # 触发预分配空间
     buf.seek(0)
 
-    GLOBAL_COLOR_MAPPINGS = (
+    color_mappings = (
         COLOR_MAPPINGS.copy()
         if always_hex_color
         else COLOR_MAPPINGS_ANSI.copy()
     )
     if always_hex_color:
-        for key in GLOBAL_COLOR_MAPPINGS.keys():
-            hexstr = GLOBAL_COLOR_MAPPINGS[key]
+        for key in color_mappings.keys():
+            hexstr = color_mappings[key]
             r, g, b = (
                 int(hexstr[:2], 16),
                 int(hexstr[2:4], 16),
                 int(hexstr[4:], 16),
             )
-            GLOBAL_COLOR_MAPPINGS[key] = f"38;2;{r};{g};{b}"
-    color_keys = set(GLOBAL_COLOR_MAPPINGS.keys()) if enable_color else set()
+            color_mappings[key] = f"38;2;{r};{g};{b}"
+    color_keys = set(color_mappings.keys()) if enable_color else set()
     ex_color_keys = set(COLOR_MAPPINGS_EX.keys()) if enable_ex_color else set()
     style_keys = set(STYLE_MAPPINGS.keys()) if enable_style else set()
 
@@ -182,7 +183,7 @@ def parse_mc_style(
 
     if using_gray_default:
         buf.write(
-            f"\033[0;{GLOBAL_COLOR_MAPPINGS['7']}m"
+            f"\033[0;{color_mappings['7']}m"
         )  # 像原版客户端一样的默认灰色
 
     for idx, char in enumerate(text):
@@ -202,7 +203,7 @@ def parse_mc_style(
 
         next_char = text[idx + 1]
         if next_char in color_keys:
-            buf.write(f"\033[0;{GLOBAL_COLOR_MAPPINGS[next_char]}m")
+            buf.write(f"\033[0;{color_mappings[next_char]}m")
             will_skipped_char_cnt += 1
         elif next_char in style_keys:
             buf.write(f"\033[{STYLE_MAPPINGS[next_char]}m")
@@ -218,7 +219,7 @@ def parse_mc_style(
             will_skipped_char_cnt += 1
         elif next_char == "r" and enable_reset:
             buf.write(
-                f"\033[0;{GLOBAL_COLOR_MAPPINGS['7']}m"
+                f"\033[0;{color_mappings['7']}m"
                 if using_gray_default
                 else "\033[0m"
             )
