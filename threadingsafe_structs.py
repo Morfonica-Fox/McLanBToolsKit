@@ -3,6 +3,7 @@ from typing import (
     Any,
     Callable,
     Iterable,
+    Iterator,
     MutableMapping,
     Self,
     TypeVar,
@@ -10,7 +11,6 @@ from typing import (
 
 import atomicx
 
-# 试图改这玩意儿但是放弃了，ide报错就让他报错吧
 # 说真的我也不知道他能不能跑
 # 记得有空尝试实现一下 MutableMapping abc -- Cbscfe
 K = TypeVar("K")
@@ -158,7 +158,7 @@ class concurrent_dict(MutableMapping[K, V]):  # noqa: N801
             yield items_snap
 
     @_non_atomised_wrapper
-    def to_dict(self):
+    def to_dict(self) -> dict[K, V]:
         res = {}
         state = [False] * (1 << self.capacity)
         while True:
@@ -204,11 +204,13 @@ class concurrent_dict(MutableMapping[K, V]):  # noqa: N801
         return self.size() == 0
 
     # 临时实现
-    __iter__ = to_dict
     __len__ = size
     __getitem__ = get
     __delitem__ = remove
     __setitem__ = put
+
+    def __iter__(self) -> Iterator[K]:
+        return self.to_dict().__iter__()
 
 
 # 读完了喵? 是的就这些注释了喵
@@ -221,7 +223,11 @@ if __name__ == "__main__":
     print(cd["key1"])
     cd.change_capacity(16)
     print(cd.get("key3", "default_value"))
-    del cd["key1"]
-    print(cd.get("key1", "default_value"))
-    del cd["key2"]
-    print(cd.get("key2"))  # 报错是正常的喵 应该报错
+    print(cd.to_dict())
+    for key in cd:
+        print(key)
+
+    # del cd["key1"]  # remove函数有问题会直接导致程序卡死(死锁？)
+    # print(cd.get("key1", "default_value"))
+    # del cd["key2"]
+    # print(cd.get("key2"))  # 报错是正常的喵 应该报错
