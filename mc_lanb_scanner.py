@@ -16,15 +16,18 @@ import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import NoReturn
 
 import pydivert
 from mcstatus import JavaServer
+from mcstatus.responses.java import JavaStatusPlayer
 
 script_dir = Path(__file__).resolve().parent
 if str(script_dir) not in sys.path:
     sys.path.insert(0, str(script_dir))
 # [fix] 修复 python 3.12.x 下无法从源码所在目录导入库的问题
 
+from debugtools import *
 from mc_lanb_advtools import (
     auto_decode_bytes,
     parse_mc_lanpacket,
@@ -32,7 +35,6 @@ from mc_lanb_advtools import (
 )
 from mc_lanb_firewall import already_holded_multicast, start_mcast_hold_daemon
 from threadingsafe_structs import *
-from debugtools import *
 
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
@@ -59,7 +61,7 @@ GetSystemTimePreciseAsFileTime.argtypes = [
 ]
 
 
-def get_qpc_anchor():
+def get_qpc_anchor() -> tuple[int, int, int]:
     qpc = LargeInt()
     ft = ctypes.wintypes.FILETIME()
     freq = LargeInt()
@@ -163,13 +165,13 @@ log_servers_thread = threading.Thread(
 log_servers_thread.start()
 
 
-def cleanup_servers():
+def cleanup_servers() -> NoReturn:
     global servers
     servers_localvar = servers
     # last_bucket_index = 0
     will_delete_servers_hashes = []
     while True:
-        for bucket_items_snap in servers_localvar.items(inaccurate=True): # type: ignore
+        for bucket_items_snap in servers_localvar.items(inaccurate=True):  # type: ignore
             will_delete_servers_hashes.clear()
             now_timestamp = get_raw_qpc()
             for server_hash, (
@@ -182,7 +184,9 @@ def cleanup_servers():
                 if now_timestamp - timestamp > timeout_server_offline:
                     will_delete_servers_hashes.append(server_hash)
             for server_hash in will_delete_servers_hashes:
-                servers_localvar.remove(server_hash, inaccurate=True, slient=True)
+                servers_localvar.remove(
+                    server_hash, inaccurate=True, slient=True
+                )
             # except: pass
             # finally: pass
 
@@ -205,7 +209,7 @@ async def scan_server(server_info_ref):
     server_info_ref[1] = get_raw_qpc()
 
 
-async def scan_servers():
+async def scan_servers() -> NoReturn:
     global servers
     servers_localvar = servers
     tasks = []
@@ -234,8 +238,13 @@ async_scan_servers_thread.start()
 
 
 def advance_style_top_server(
-    src_ip, port, last_scan_timestamp, motd, player_count, player_sample
-):
+    src_ip,
+    port,
+    last_scan_timestamp: int,
+    motd: str,
+    player_count,
+    player_sample: Iterable[JavaStatusPlayer],
+) -> str:
     return f"""\
 \033[1;48;2;220;0;0m\033[38;2;255;255;255m╔════════════ Top 1. {src_ip}:{port} \033[22;3;38;2;180;180;180m(last_scan: {qpc_to_utc_datetime(last_scan_timestamp)}) ════════════\033[0m
 \033[1;48;2;220;0;0m\033[38;2;255;255;255m║\033[0m {parse_mc_style(motd)}\033[0m

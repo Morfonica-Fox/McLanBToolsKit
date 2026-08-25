@@ -1,6 +1,6 @@
 import functools
 import threading
-from typing import Callable, MutableMapping, Self, Any, Iterable  # noqa: F401
+from typing import Callable, MutableMapping, Self, Any, Iterable
 
 import atomicx
 
@@ -8,7 +8,7 @@ import atomicx
 # 试图改这玩意儿但是放弃了，ide报错就让他报错吧
 # 说真的我也不知道他能不能跑
 # 记得有空尝试实现一下 MutableMapping abc -- Cbscfe
-class concurrent_dict:  # noqa: N801
+class concurrent_dict(MutableMapping):  # noqa: N801
     def __init__(
         self,
         default_capacity: int = 8,  # 2的幂次喵 并非是8个桶 是指2**8个桶喵
