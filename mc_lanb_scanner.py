@@ -16,7 +16,7 @@ import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import NoReturn
+from typing import NoReturn, TypeAlias, NamedTuple
 
 import pydivert
 from mcstatus import JavaServer
@@ -102,16 +102,32 @@ def qpc_to_utc_datetime(qpc_tick: int) -> datetime:
     )
 
 
-wdobj: pydivert.WinDivert | None = None
-servers = concurrent_dict()
+HashedServer: TypeAlias = tuple
+
+
+class PlayerInfo(NamedTuple):
+    player_count: int
+    player_sample: Any
+
+
+class ServerData(NamedTuple):
+    timestamp: int
+    last_scan_timestamp: int
+    motd: str
+    server_obj: JavaServer | None
+    player_info: Any
+
+# TODO: 太麻烦了我懒得改,下面的list实际上是ServerData
+servers: concurrent_dict[HashedServer, list] = concurrent_dict()
+
 qpc_freq = get_qpc_frequency()
 timeout_server_offline = int(4.5 * qpc_freq)
 scan_delay_per_server = int(12 * qpc_freq)
-# struct of server: hash: [timestamp, last_scan_timestamp, motd, server_obj, player_info]
-# struct of player_info: [player_count, player_sample]
+
+wdobj: pydivert.WinDivert | None = None
 
 
-def hash_server(src_ip: str, port: str) -> tuple:
+def hash_server(src_ip: str, port: str) -> HashedServer:
     # 如果后续要更改服务器分辨规则直接改这个
     return src_ip, port
 
@@ -138,9 +154,7 @@ def log_servers():
             if not (port.isdigit() and 0 <= int(port) <= 65535):
                 server_obj_pre_builded = None
             else:
-                server_obj_pre_builded = JavaServer(
-                    host=src_ip, port=int(port)
-                )
+                server_obj_pre_builded = JavaServer(src_ip, int(port))
 
             server = servers_localvar.get(
                 hash_server(src_ip, port),
