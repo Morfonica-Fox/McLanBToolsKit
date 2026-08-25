@@ -1,14 +1,23 @@
 import functools
 import threading
-from typing import Callable, MutableMapping, Self, Any, Iterable
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    Iterable,
+    MutableMapping,
+    Self,
+    TypeVar,
+)
 
 import atomicx
-
 
 # 试图改这玩意儿但是放弃了，ide报错就让他报错吧
 # 说真的我也不知道他能不能跑
 # 记得有空尝试实现一下 MutableMapping abc -- Cbscfe
-class concurrent_dict(MutableMapping):  # noqa: N801
+K = TypeVar('K')
+V = TypeVar('V')
+class concurrent_dict(MutableMapping[K, V], Generic[K, V]):  # noqa: N801
     def __init__(
         self,
         default_capacity: int = 8,  # 2的幂次喵 并非是8个桶 是指2**8个桶喵
@@ -22,6 +31,7 @@ class concurrent_dict(MutableMapping):  # noqa: N801
         self._ops_executing = atomicx.AtomicInt()
         self._is_changeing = atomicx.AtomicBool(False)
 
+    # 我错了，这个装饰器有大问题，怎么改都报错，请fox指教 -- Cbscfe
     @staticmethod
     def _non_atomised_wrapper(func: Callable):
         @functools.wraps(func)
@@ -38,7 +48,6 @@ class concurrent_dict(MutableMapping):  # noqa: N801
         return wrapfunc
 
     def change_capacity(self, capacity: int):
-        # 需要对这一段到底在干什么做出解释，我不明白 -- Cbscfe
         with self._lock_on_change:
             if self.capacity == capacity:  # DCL 检查喵
                 return  # 虽然感觉没什么用但是写了更规范喵
@@ -195,17 +204,25 @@ class concurrent_dict(MutableMapping):  # noqa: N801
     def is_empty(self):
         return self.size() == 0
 
+    # 临时实现
+    __iter__ = to_dict
+    __len__ = size
+    __getitem__ = get
+    __delitem__ = remove
+    __setitem__ = put
+
 
 # 读完了喵? 是的就这些注释了喵
 
 if __name__ == "__main__":
-    cd = concurrent_dict()
+    cd: concurrent_dict[str, str] = concurrent_dict()
+
     cd.put("key1", "value1")
-    cd.put("key2", "value2")
-    print(cd.get("key1"))
+    cd["key2"] = "value2"
+    print(cd["key1"])
     cd.change_capacity(16)
     print(cd.get("key3", "default_value"))
-    cd.rmv("key1")
+    del cd["key1"]
     print(cd.get("key1", "default_value"))
-    cd.rmv_slient("key2")
+    del cd["key2"]
     print(cd.get("key2"))  # 报错是正常的喵 应该报错
