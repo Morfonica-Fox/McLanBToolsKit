@@ -1,9 +1,7 @@
-import functools
 import threading
 from typing import (
     Any,
     Callable,
-    Generic,
     Iterable,
     MutableMapping,
     Self,
@@ -15,9 +13,11 @@ import atomicx
 # 试图改这玩意儿但是放弃了，ide报错就让他报错吧
 # 说真的我也不知道他能不能跑
 # 记得有空尝试实现一下 MutableMapping abc -- Cbscfe
-K = TypeVar('K')
-V = TypeVar('V')
-class concurrent_dict(MutableMapping[K, V], Generic[K, V]):  # noqa: N801
+K = TypeVar("K")
+V = TypeVar("V")
+
+
+class concurrent_dict(MutableMapping[K, V]):  # noqa: N801
     def __init__(
         self,
         default_capacity: int = 8,  # 2的幂次喵 并非是8个桶 是指2**8个桶喵
@@ -31,11 +31,10 @@ class concurrent_dict(MutableMapping[K, V], Generic[K, V]):  # noqa: N801
         self._ops_executing = atomicx.AtomicInt()
         self._is_changeing = atomicx.AtomicBool(False)
 
-    # 我错了，这个装饰器有大问题，怎么改都报错，请fox指教 -- Cbscfe
     @staticmethod
     def _non_atomised_wrapper(func: Callable):
-        @functools.wraps(func)
-        def wrapfunc(self: Self, *args, **kwargs):  # pyright: ignore[reportRedeclaration]
+        # @functools.wraps(func)  # 会导致pyright报错无法识别隐式传递的self
+        def wrapfunc(self: Self, *args, **kwargs):
             while self._is_changeing.load():
                 pass
             self._ops_executing.inc()
