@@ -166,10 +166,10 @@ log_servers_thread.start()
 def cleanup_servers():
     global servers
     servers_localvar = servers
-    last_bucket_index = 0
+    # last_bucket_index = 0
     will_delete_servers_hashes = []
     while True:
-        for bucket_items_snap in servers_localvar.items(inaccurate=True):
+        for bucket_items_snap in servers_localvar.items(inaccurate=True): # type: ignore
             will_delete_servers_hashes.clear()
             now_timestamp = get_raw_qpc()
             for server_hash, (
@@ -195,7 +195,7 @@ cleanup_servers_thread = threading.Thread(
 # cleanup_servers_thread.start()
 
 
-async def scan_server(server_info_ref: list[int, list[str]]):
+async def scan_server(server_info_ref):
     player_info_ref = server_info_ref[4]
     server_obj: JavaServer = server_info_ref[3]
     status = await server_obj.async_status()
@@ -209,7 +209,7 @@ async def scan_servers():
     global servers
     servers_localvar = servers
     tasks = []
-    last_bucket_index = 0
+    # last_bucket_index = 0
     while True:
         tasks.clear()
         for bucket_items_snap in servers_localvar.items(inaccurate=True):

@@ -1,9 +1,13 @@
 import functools
 import threading
-from typing import Callable, Self, Any, Iterable, Literal
+from typing import Callable, MutableMapping, Self, Any, Iterable  # noqa: F401
 
 import atomicx
 
+
+# 试图改这玩意儿但是放弃了，ide报错就让他报错吧
+# 说真的我也不知道他能不能跑
+# 记得有空尝试实现一下 MutableMapping abc -- Cbscfe
 class concurrent_dict:  # noqa: N801
     def __init__(
         self,
@@ -60,7 +64,7 @@ class concurrent_dict:  # noqa: N801
     def put(self, key, value, inaccurate: bool = False):
         h = hash(key)
         suffix = h & ((1 << self.capacity) - 1)
-        if not self._buckets_locks[suffix].acquire(blocking=not inaccurate):
+        if not self._buckets_locks[suffix].acquire(not inaccurate):
             return
         try:
             self._buckets[suffix][key] = value
@@ -76,18 +80,18 @@ class concurrent_dict:  # noqa: N801
             pre_calc_buckets[suffix][key] = value
         for suffix, bucket_append in enumerate(pre_calc_buckets):
             if bucket_append:
-                if not self._buckets_locks[suffix].acquire(blocking=not inaccurate):
+                if not self._buckets_locks[suffix].acquire(not inaccurate):
                     continue
                 try:
                     self._buckets[suffix].update(bucket_append)
                 finally:
                     self._buckets_locks[suffix].release()
-    
+
     @_non_atomised_wrapper
-    def get(self, key, default = None, inaccurate: bool = False):
+    def get(self, key, default=None, inaccurate: bool = False):
         h = hash(key)
         suffix = h & ((1 << self.capacity) - 1)
-        if not self._buckets_locks[suffix].acquire(blocking=not inaccurate):
+        if not self._buckets_locks[suffix].acquire(not inaccurate):
             return
         try:
             if default is None:
@@ -98,7 +102,9 @@ class concurrent_dict:  # noqa: N801
             self._buckets_locks[suffix].release()
 
     @_non_atomised_wrapper
-    def gets(self, keys: Iterable[Any], default = None, inaccurate: bool = False):
+    def gets(
+        self, keys: Iterable[Any], default=None, inaccurate: bool = False
+    ):
         keys_bucket = [list() for _ in range(1 << self.capacity)]
         for key in keys:
             h = hash(key)
@@ -107,7 +113,7 @@ class concurrent_dict:  # noqa: N801
         results = {}
         for suffix, keys_need_get in enumerate(keys_bucket):
             if keys_need_get:
-                if not self._buckets_locks[suffix].acquire(blocking=not inaccurate):
+                if not self._buckets_locks[suffix].acquire(blocking = not inaccurate):  # fmt: skip
                     return
                 try:
                     if default is None:
@@ -116,33 +122,33 @@ class concurrent_dict:  # noqa: N801
                     results[key] = value
                 finally:
                     self._buckets_locks[suffix].release()
-    
+
     @_non_atomised_wrapper
     def remove(self, key, slient: bool = False, inaccurate: bool = False):
         h = hash(key)
         suffix = h & ((1 << self.capacity) - 1)
         with self._buckets_locks[suffix]:
-            if not self._buckets_locks[suffix].acquire(blocking=not inaccurate):
+            if not self._buckets_locks[suffix].acquire(not inaccurate):
                 return
             try:
                 if key in self._buckets[suffix]:
                     del self._buckets[suffix][key]
                 elif not slient:
-                    raise KeyError(f'{key} not found in the concurrent dict')
+                    raise KeyError(f"{key} not found in the concurrent dict")
             finally:
                 self._buckets_locks[suffix].release()
 
     @_non_atomised_wrapper
     def items(self, inaccurate: bool = False):
         for bucket_index in range(1 << self.capacity):
-            if not self._buckets_locks[bucket_index].acquire(blocking=not inaccurate):
+            if not self._buckets_locks[bucket_index].acquire(not inaccurate):
                 yield []
             try:
                 items_snap = list(self._buckets[bucket_index].items())
             finally:
                 self._buckets_locks[bucket_index].release()
             yield items_snap
-    
+
     @_non_atomised_wrapper
     def to_dict(self):
         res = {}
@@ -151,7 +157,8 @@ class concurrent_dict:  # noqa: N801
             for index, (bucket, lock) in enumerate(
                 zip(self._buckets, self._buckets_locks)
             ):
-                if state[index]: continue
+                if state[index]:
+                    continue
                 if not lock.acquire(blocking=False):
                     continue
                 try:
@@ -163,7 +170,6 @@ class concurrent_dict:  # noqa: N801
                 break
         return res
 
-
     @_non_atomised_wrapper
     def clear(self):
         state = [False] * (1 << self.capacity)
@@ -171,7 +177,8 @@ class concurrent_dict:  # noqa: N801
             for index, (bucket, lock) in enumerate(
                 zip(self._buckets, self._buckets_locks)
             ):
-                if state[index]: continue
+                if state[index]:
+                    continue
                 if not lock.acquire(blocking=False):
                     continue
                 try:
@@ -187,6 +194,7 @@ class concurrent_dict:  # noqa: N801
 
     def is_empty(self):
         return self.size() == 0
+
 
 # 读完了喵? 是的就这些注释了喵
 
