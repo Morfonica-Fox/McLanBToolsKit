@@ -103,7 +103,6 @@ def reload():
     mc_lanb_cond = importlib.reload(mc_lanb_cond)
     mc_lanb_cond.kept_data = original_kept_data  # pyright: ignore[reportAttributeAccessIssue]
     mc_lanb_cond.on_updated(time.time())
-    # cb虽然但是不要乱动命名空间注入啊 或者调试一下:( 不调试就提交是不好的习惯
 
 
 class CodeEventHandler(FileSystemEventHandler):
@@ -115,7 +114,8 @@ class CodeEventHandler(FileSystemEventHandler):
             time.time() - self.last_updated_time < 0.1
         ):  # ? 说的啥 noqa是什么 ARG002又是
             return
-        reload()
+        if Path(event.src_path).name == 'mc_lanb_cond.py':
+            reload()
 
 
 def main():

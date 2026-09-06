@@ -151,6 +151,7 @@ class concurrent_dict(MutableMapping[K, V]):  # noqa: N801
         for bucket_index in range(1 << self.capacity):
             if not self._buckets_locks[bucket_index].acquire(not inaccurate):
                 yield []
+                continue
             try:
                 items_snap = list(self._buckets[bucket_index].items())
             finally:

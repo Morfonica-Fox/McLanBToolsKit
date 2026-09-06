@@ -210,7 +210,7 @@ cleanup_servers_thread = threading.Thread(
     args=(cleanup_servers, "cleanup servers thread"),
     daemon=True,
 )
-# cleanup_servers_thread.start()
+cleanup_servers_thread.start()
 
 
 async def scan_server(server_info_ref):

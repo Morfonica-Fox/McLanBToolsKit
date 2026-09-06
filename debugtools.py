@@ -15,14 +15,9 @@ def wrapper_core_thread(func, thread_name):
 
 
 def dump_all_thread_stacks(output_buffer: BinaryIO = sys.stdout.buffer):
-    """
-    打印所有活跃线程：线程名、tid、完整调用栈、每帧局部变量、全局变量
-    :param limit_var_length: 变量repr最大输出长度，避免打印巨大对象
-    """
     output_buffer.write(f"======== DUMP ALL THREADS | Time: {threading.get_ident()} main tid ========\n".encode("utf-8"))  # fmt: skip
 
     thread_map: dict[int, threading.Thread] = {t.ident: t for t in threading.enumerate() if t.ident is not None}  # fmt: skip
-    # 获取所有线程的帧快照；注意：仅Python层，C阻塞时帧为旧状态
     thread_frames: dict[int, FrameType] = sys._current_frames()
 
     for tid, frame in thread_frames.items():
