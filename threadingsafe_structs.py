@@ -15,6 +15,7 @@ import atomicx
 # 记得有空尝试实现一下 MutableMapping abc -- Cbscfe
 K = TypeVar("K")
 V = TypeVar("V")
+D = TypeVar("D")
 
 
 class concurrent_dict(MutableMapping[K, V]):  # noqa: N801
@@ -54,9 +55,7 @@ class concurrent_dict(MutableMapping[K, V]):  # noqa: N801
                 pass
             self._is_changeing.store(True)
             self.capacity = capacity
-            new_buckets: list[dict] = [
-                dict() for _ in range(1 << self.capacity)
-            ]
+            new_buckets: list[dict] = [dict() for _ in range(1 << self.capacity)]
             for bucket in self._buckets:
                 for key, value in bucket.items():
                     h = hash(key)
@@ -96,11 +95,11 @@ class concurrent_dict(MutableMapping[K, V]):  # noqa: N801
                     self._buckets_locks[suffix].release()
 
     @_non_atomised_wrapper
-    def get(self, key, default=None, inaccurate: bool = False):
+    def get(self, key, default: D = None, inaccurate: bool = False) -> D | V:
         h = hash(key)
         suffix = h & ((1 << self.capacity) - 1)
         if not self._buckets_locks[suffix].acquire(not inaccurate):
-            return
+            return  # pyright: ignore[reportReturnType]
         try:
             if default is None:
                 return self._buckets[suffix][key]
@@ -110,9 +109,7 @@ class concurrent_dict(MutableMapping[K, V]):  # noqa: N801
             self._buckets_locks[suffix].release()
 
     @_non_atomised_wrapper
-    def gets(
-        self, keys: Iterable[Any], default=None, inaccurate: bool = False
-    ):
+    def gets(self, keys: Iterable[Any], default=None, inaccurate: bool = False):
         keys_bucket = [list() for _ in range(1 << self.capacity)]
         for key in keys:
             h = hash(key)
@@ -135,15 +132,14 @@ class concurrent_dict(MutableMapping[K, V]):  # noqa: N801
     def remove(self, key, slient: bool = False, inaccurate: bool = False):
         h = hash(key)
         suffix = h & ((1 << self.capacity) - 1)
-        with self._buckets_locks[suffix]:
-            if not self._buckets_locks[suffix].acquire(not inaccurate):
+        if not self._buckets_locks[suffix].acquire(not inaccurate):
                 return
-            try:
+        try:
                 if key in self._buckets[suffix]:
                     del self._buckets[suffix][key]
                 elif not slient:
                     raise KeyError(f"{key} not found in the concurrent dict")
-            finally:
+        finally:
                 self._buckets_locks[suffix].release()
 
     @_non_atomised_wrapper
@@ -214,8 +210,6 @@ class concurrent_dict(MutableMapping[K, V]):  # noqa: N801
         return self.to_dict().__iter__()
 
 
-# 读完了喵? 是的就这些注释了喵
-
 if __name__ == "__main__":
     cd: concurrent_dict[str, str] = concurrent_dict()
 
@@ -228,7 +222,7 @@ if __name__ == "__main__":
     for key in cd:
         print(key)
 
-    # del cd["key1"]  # remove函数有问题会直接导致程序卡死(死锁？)
-    # print(cd.get("key1", "default_value"))
-    # del cd["key2"]
-    # print(cd.get("key2"))  # 报错是正常的喵 应该报错
+    del cd["key1"] 
+    print(cd.get("key1", "default_value"))
+    del cd["key2"]
+    print(cd.get("key2"))  # 报错是正常的喵 应该报错

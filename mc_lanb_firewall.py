@@ -80,9 +80,7 @@ def mc_lan_multicast_hold(
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind(("0.0.0.0", mc_mcast_port))
 
-    mreq = struct.pack(
-        "4sl", socket.inet_aton(mc_mcast_group), socket.INADDR_ANY
-    )
+    mreq = struct.pack("4sl", socket.inet_aton(mc_mcast_group), socket.INADDR_ANY)
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
     already_holded_multicast.set()
 
@@ -109,12 +107,12 @@ class CodeEventHandler(FileSystemEventHandler):
     def __init__(self):
         self.last_updated_time = -1
 
-    def on_modified(self, event):  # noqa: ARG002
-        if (
-            time.time() - self.last_updated_time < 0.1
-        ):  # ? 说的啥 noqa是什么 ARG002又是
+    def on_modified(self, event):
+        if time.time() - self.last_updated_time < 0.1:
             return
-        if Path(event.src_path).name == 'mc_lanb_cond.py':
+
+        assert isinstance(event.src_path, str)  # 我也不知道为什么event.src_path有可能会是bytes
+        if Path(event.src_path).name == "mc_lanb_cond.py":
             reload()
 
 

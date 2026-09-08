@@ -40,5 +40,6 @@ WinDivert*.sys
 # 配置文件
 temp_ip_blacklist.txt
 
-# 被抛弃的配置文件
+# 被抛弃...
 broadcast_config.toml
+logger.py

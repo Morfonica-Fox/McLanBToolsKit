@@ -107,7 +107,7 @@ HashedServer: TypeAlias = tuple
 
 class PlayerInfo(NamedTuple):
     player_count: int
-    player_sample: Any
+    player_sample: Any  # 我不知道这是啥...
 
 
 class ServerData(NamedTuple):
@@ -115,7 +115,7 @@ class ServerData(NamedTuple):
     last_scan_timestamp: int
     motd: str
     server_obj: JavaServer | None
-    player_info: Any
+    player_info: Any  # 我不知道这是啥...
 
 # TODO: 太麻烦了我懒得改,下面的list实际上是ServerData
 servers: concurrent_dict[HashedServer, list] = concurrent_dict()
