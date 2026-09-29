@@ -112,8 +112,10 @@ def color_gradient(val: int, max_val: int, pad_ex: int = 2) -> str:
 
     return f"\033[0;38;2;{r};{g};{b}m{val}\033[0m" + padder
 
+hard_blacklist = set()
 
 def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
+    global hard_blacklist
     assert packet.payload is not None
 
     original_data, coding = utils.auto_decode_bytes(
@@ -137,30 +139,34 @@ def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
     max_per_min = 84
     ip_max_per_1dot5_sec = max_per_1dot5_sec * 8
     ip_max_per_min = max_per_min * 8
-
-    if broadcast_counters.get(sid, None) is None:
-        broadcast_counters[sid] = PPTCounter(sid)
-    broadcast_counters[sid].trig()
-    if ip_counters.get(src_ip, None) is None:
-        ip_counters[src_ip] = PPTCounter(src_ip)
-    ip_counters[src_ip].trig()
-
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
     f_src_ip = f"{src_ip: <15}"
     f_dst_ip = f"{dst_ip: <15}"
     f_coding = f"{coding: <5}"
     f_port = f"{port: <5}"
-    f_per_1dot5_sec = color_gradient(
-        round(broadcast_counters[sid].get_per_time(1.5)),
-        max_val=max_per_1dot5_sec,
-        pad_ex=2,
-    )
-    f_per_min = color_gradient(
-        round(broadcast_counters[sid].get_per_time(60.0)),
-        max_val=max_per_min,
-        pad_ex=2,
-    )
+    
+    if port.isdigit() and (0 <= int(port) <= 65535):
+        if broadcast_counters.get(sid, None) is None:
+            broadcast_counters[sid] = PPTCounter(sid)
+        broadcast_counters[sid].trig()
+        f_per_1dot5_sec = color_gradient(
+            round(broadcast_counters[sid].get_per_time(1.5)),
+            max_val=max_per_1dot5_sec,
+            pad_ex=2,
+        )
+        f_per_min = color_gradient(
+            round(broadcast_counters[sid].get_per_time(60.0)),
+            max_val=max_per_min,
+            pad_ex=2,
+        )
+    else:
+        f_per_1dot5_sec = "?  "
+        f_per_min = "?  "
+    
+    if ip_counters.get(src_ip, None) is None:
+        ip_counters[src_ip] = PPTCounter(src_ip)
+    ip_counters[src_ip].trig()
     f_ip_per_1dot5_sec = color_gradient(
         round(ip_counters[src_ip].get_per_time(1.5)),
         max_val=ip_max_per_1dot5_sec,
@@ -171,15 +177,19 @@ def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
         max_val=ip_max_per_min,
         pad_ex=2,
     )
+    
     f_motd = utils.parse_mc_style(
         motd, using_gray_default=True
     )  # .replace('\033', '\\033')
 
-    if (
-        broadcast_counters[sid].get_per_time(1.5) > max_per_1dot5_sec
-        or broadcast_counters[sid].get_per_time(60.0) > max_per_min
-    ):
-        result = False
+    try:
+        if (
+            broadcast_counters[sid].get_per_time(1.5) > max_per_1dot5_sec
+            or broadcast_counters[sid].get_per_time(60.0) > max_per_min
+        ):
+            result = False
+    except:
+        pass
     if (
         ip_counters[src_ip].get_per_time(1.5) > ip_max_per_1dot5_sec
         or ip_counters[src_ip].get_per_time(60.0) > ip_max_per_min
@@ -223,17 +233,17 @@ def will_update(timestamp: float):  # noqa: ARG001
 
 
 def on_updated(timestamp: float):  # noqa: ARG001
-    global utils
+    global utils, hard_blacklist
     print("on updated", time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
     utils = importlib.reload(utils)
     # if kept_data.get('packet_logger_term', None) is None:
     # kept_data['packet_logger_term'] = Terminal('Mc LanB Firewall: Packet Logger Terminal')
     # kept_data['packet_logger_term'].alloc(configs={'enable_input': False})
-
-
-temp_ip_blacklist_file = Path("./temp_ip_blacklist.txt")
-temp_ip_blacklist_file.touch()
-
-with temp_ip_blacklist_file.open("r", encoding="utf-8") as f:
-    blacklist = set([f.strip() for f in f.readlines()])
-    # banned_ips？
+    
+    temp_ip_blacklist_file = Path("./temp_ip_blacklist.txt")
+    temp_ip_blacklist_file.touch()
+    
+    with temp_ip_blacklist_file.open("r", encoding="utf-8") as f:
+        hard_blacklist = set([f.strip() for f in f.readlines()])
+        # banned_ips？
+    
