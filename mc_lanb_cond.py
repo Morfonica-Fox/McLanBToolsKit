@@ -228,7 +228,7 @@ def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
     try:
         if (
             b_ut > max_per_1dot5_sec
-            or broadcast_counters[sid].sum_history_window(tp) > max_per_min
+            or b_pm > max_per_min
         ):
             result = False
     except:
@@ -258,11 +258,11 @@ def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
         + ("\033[0;92m[A →]" if result else "\033[1;38;2;251;242;219;48;2;200;0;0m[B ✘]")
         + f"\033[0m {f_motd}\033[0m"
     )
-
-    print(p_info)
-
+    
     # 修复 (Neo)Forge 客户端收不到广播包的问题
     packet.dst_addr = "255.255.255.255"
+
+    print(p_info)
 
     if result:
         wd_object.send(packet)
