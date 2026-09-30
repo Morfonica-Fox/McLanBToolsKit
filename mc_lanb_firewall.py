@@ -20,7 +20,7 @@ import threading
 import time
 from contextlib import suppress
 from pathlib import Path
-from typing import NoReturn, Callable
+from typing import Callable, Iterable, Mapping, NoReturn, Optional
 
 import pydivert
 from watchdog.events import FileSystemEventHandler
@@ -38,9 +38,9 @@ ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
 
 def benchmark_func(
     func: Callable,
-    args: list = None,
-    kwargs: dict = None,
-    time_testing: float = 10.0
+    args: Optional[Iterable] = None,
+    kwargs: Optional[Mapping] = None,
+    time_testing: float = 10.0,
 ) -> tuple[float, float]:
     if args is None:
         args = []
@@ -134,7 +134,8 @@ class CodeEventHandler(FileSystemEventHandler):
         if time.time() - self.last_updated_time < 0.1:
             return
 
-        assert isinstance(event.src_path, str)  # 我也不知道为什么event.src_path有可能会是bytes
+        # 我也不知道为什么event.src_path有可能会是bytes
+        assert isinstance(event.src_path, str)
         if Path(event.src_path).name == "mc_lanb_cond.py":
             reload()
 
@@ -168,34 +169,52 @@ if __name__ == "__main__":
         already_holded_multicast.wait()
         main()
     else:
+
         class FakeWD:
             def send(self, *args, **kwargs):
                 pass
+
         fake_wd = FakeWD()
+
         class FakePkt_Valid:
-            payload = b'[MOTD]qwqqwwqqqqwwqwwwwqqqqqq[/MOTD][AD]25565[/AD]'
+            payload = b"[MOTD]qwqqwwqqqqwwqwwwwqqqqqq[/MOTD][AD]25565[/AD]"
             src_addr = "benchmark_fakeip1"
             dst_addr = "benchmark_fakeip1"
+
         class FakePkt_InvalidPort:
-            payload = b'[MOTD]qwqqwwqqqqwwqwwwwqqqqqq[/MOTD][AD]-114514a[/AD]'
+            payload = b"[MOTD]qwqqwwqqqqwwqwwwwqqqqqq[/MOTD][AD]-114514a[/AD]"
             src_addr = "benchmark_fakeip2"
             dst_addr = "benchmark_fakeip2"
+
         class FakePkt_InvalidFormatting:
-            payload = b'[MMTOD]qwqqwwqqqqwwqwwwwqqqqqq[//////OOOOTTM][AI][[[[]![[[/??][AD]25565[/AD]'
+            payload = b"[MMTOD]qwqqwwqqqqwwqwwwwqqqqqq[//////OOOOTTM][AI][[[[]![[[/??][AD]25565[/AD]"
             src_addr = "benchmark_fakeip3"
             dst_addr = "benchmark_fakeip3"
+
         fake_pkt_ip = FakePkt_InvalidPort()
         fake_pkt_if = FakePkt_InvalidFormatting()
         fake_pkt_v = FakePkt_Valid()
-        avg_cost_v, qps_v = benchmark_func(mc_lanb_cond.handler, args=[fake_pkt_v, fake_wd], time_testing=10.0)
-        avg_cost_ip, qps_ip = benchmark_func(mc_lanb_cond.handler, args=[fake_pkt_ip, fake_wd], time_testing=10.0)
-        print('接下来 将进行不合法的包的压测 由于设计 不合法的包将不会产生任何输出 所以不是终端卡死 请注意辨别')
-        print('Next, we will perform illegal packet testing. Since the design does not produce any output for illegal packets, it is not terminal dead. Please distinguish. ')
-        avg_cost_if, qps_if = benchmark_func(mc_lanb_cond.handler, args=[fake_pkt_if, fake_wd], time_testing=10.0)
-        print(f'for vaild packet, ')
+        avg_cost_v, qps_v = benchmark_func(
+            mc_lanb_cond.handler,
+            args=[fake_pkt_v, fake_wd],
+            time_testing=10.0,
+        )
+        avg_cost_ip, qps_ip = benchmark_func(
+            mc_lanb_cond.handler,
+            args=[fake_pkt_ip, fake_wd],
+            time_testing=10.0,
+        )
+        print("接下来 将进行不合法的包的压测 由于设计 不合法的包将不会产生任何输出 所以不是终端卡死 请注意辨别")  # fmt: skip
+        print("Next, we will perform illegal packet testing.")
+        print("Since the design does not produce any output for illegal packets, it is not terminal dead. Please distinguish. ")  # fmt: skip
+        avg_cost_if, qps_if = benchmark_func(
+            mc_lanb_cond.handler,
+            args=[fake_pkt_if, fake_wd],
+            time_testing=10.0,
+        )
+        print("for vaild packet, ")
         print(f"avg_cost: {avg_cost_v}, qps: {qps_v}")
-        print(f'for invaild port packet, ')
+        print("for invaild port packet, ")
         print(f"avg_cost: {avg_cost_ip}, qps: {qps_ip}")
-        print(f'for invaild formatting packet, ')
+        print("for invaild formatting packet, ")
         print(f"avg_cost: {avg_cost_if}, qps: {qps_if}")
-

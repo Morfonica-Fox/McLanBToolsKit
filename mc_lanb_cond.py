@@ -12,16 +12,15 @@ from __future__ import annotations
 
 __all__ = ["handler"]
 
-import importlib
+#import atomics
 #import itertools
+# import importlib
+#import numpy as np
+#import ctypes
+#from collections import deque
 import sys
 import time
-#import atomics
-import ctypes
-from collections import deque
 from pathlib import Path
-import numpy as np
-from typing import Literal
 
 import pydivert
 
