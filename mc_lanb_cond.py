@@ -12,17 +12,21 @@ from __future__ import annotations
 
 __all__ = ["handler"]
 
-import bisect
 import importlib
-import itertools
+#import itertools
 import sys
 import time
+#import atomics
+import ctypes
 from collections import deque
 from pathlib import Path
+import numpy as np
+from typing import Literal
 
 import pydivert
 
 import mc_lanb_advtools as utils
+import qpc_time_lib as qpctime
 
 script_dir = Path(__file__).parent.resolve()  # 支持Embedding版本Python!
 sys.path.insert(0, str(script_dir))  # Embedding版默认不从脚本所在目录导入库
@@ -30,51 +34,80 @@ sys.path.insert(0, str(script_dir))  # Embedding版默认不从脚本所在目�
 
 banned_ips = {"26.19.87.179"}
 kept_data = {
-    "ppt_counter:deques": {},
+    "ppt_counter:data": {},
     "broadcast_counters": {},
     "ip_counters": {},
 }
 
-
 class PPTCounter:
-    def __init__(self, ctr_id, max_record_time: float = 60.0):
-        kept_data["ppt_counter:deques"].setdefault(ctr_id, deque())
-        self.max_record_time = max_record_time
-        self.records = kept_data["ppt_counter:deques"][ctr_id]
-        self.first_trig = None
+    def __init__(self, ctr_id, max_record_time: float | int = 60.0, utime: float | int = 1.5):
+        max_record_time = self.standardisation_time(max_record_time)
+        utime = self.standardisation_time(utime)
+        if utime > max_record_time:
+            raise ValueError('unit time should be less than max record time')
+        self.utime = utime
+        self.buckets_count = max_record_time // utime
+        self.max_record_time = self.buckets_count * utime # 修正逻辑 故意这样干的 因为业务最后还是会丢弃超过窗口的数据 这里向下取整没问题
+        self.dataref = dataref = kept_data["ppt_counter:data"].setdefault(ctr_id, [None, None, None])
+        if dataref[0] is None: dataref[0] = self.buckets = [0] * self.buckets_count
+        if dataref[1] is None: dataref[1] = self.buckets_last_update_time = [0] * self.buckets_count
+        self.base_time = dataref[2]
+        
+    def standardisation_time(self, tm: int | float) -> int:
+        if not isinstance(tm, int): 
+            tm = int(tm * qpctime.QPC_FREQ)
+        return tm
+    
+    def sum_history_window(self, current_time: int | float) -> int:
+        self.clean_old_data(current_time=current_time)
+        return sum(self.buckets)
+    
+    def maxium_history_window(self, current_time: int | float) -> int:
+        self.clean_old_data(current_time)
+        return max(self.buckets)
 
-    def _clean_expired(self):
-        current_time = time.time()
-        expire_time = current_time - self.max_record_time
+    def average_history_window(self, current_time: int | float) -> float:
+        self.clean_old_data(current_time=current_time)
+        return sum(self.buckets) / self.buckets_count
+    
+    def trigged_this_utime(self, current_time: int | float) -> int | None:
+        if self.base_time is None: return
+        bucket_idx = (current_time - self.base_time) // self.utime % self.buckets_count
+        self.clean_single_bucket_old_data(bucket_idx=bucket_idx, current_time=current_time)
+        return self.buckets[bucket_idx]
+    
+    def clean_old_data(self, current_time: int | float) -> None:
+        if self.base_time is None: return
+        current_time = self.standardisation_time(current_time)
+        for i, (val, last_update_time) in enumerate(zip(self.buckets, self.buckets_last_update_time)):
+            if current_time - last_update_time > self.max_record_time:
+                self.buckets[i] = 0
+                self.buckets_last_update_time[i] = current_time
+    
+    def clean_single_bucket_old_data(self, bucket_idx: int, current_time: int | float) -> None:
+        if self.base_time is None: return
+        current_time = self.standardisation_time(current_time)
+        if current_time - self.buckets_last_update_time[bucket_idx] > self.max_record_time:
+            self.buckets[bucket_idx] = 0
+    
+    def trig(self, current_time: int | float) -> None:
+        current_time = self.standardisation_time(current_time)
+        if self.base_time is None:
+            self.base_time = current_time - (self.utime >> 1)
+            self.dataref[2] = self.base_time
+        idx = (current_time - self.base_time) // self.utime % self.buckets_count
+        if current_time - self.buckets_last_update_time[idx] > self.max_record_time:
+            self.buckets[idx] = 0
+        self.buckets_last_update_time[idx] = current_time
+        self.buckets[idx] += 1
 
-        idx = bisect.bisect_right(self.records, expire_time)
-        if idx > 0:
-            self.records = deque(itertools.islice(self.records, idx, None))
-
-    def trig(self):
-        current_time = time.time()
-        self.first_trig = self.first_trig or current_time
-        self.records.append(current_time)
-        self._clean_expired()
-
-    def get_per_time(self, custom_time: float) -> int:
-        if custom_time <= 0:
-            return 0
-
-        current_time = time.time()
-        self._clean_expired()
-        start_time = current_time - custom_time
-        idx = bisect.bisect_left(self.records, start_time)
-        return len(self.records) - idx
-
-    def get_all(self) -> deque:
-        self._clean_expired()
-        return self.records
-
-    def clear(self):
-        self.records.clear()
-        self.first_trig = None
-
+    def reset(self) -> None:
+        for i in range(len(self.buckets)):
+            self.buckets[i] = 0
+            self.buckets_last_update_time[i] = 0
+        self.base_time = None
+        self.dataref[2] = None
+    
 
 def color_gradient(val: int, max_val: int, pad_ex: int = 2) -> str:
     padder = " " * (len(str(max_val)) - len(str(val)) + pad_ex)
@@ -135,8 +168,8 @@ def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
     sid = (src_ip, port, dst_ip)
 
     result = True
-    max_per_1dot5_sec = 5
-    max_per_min = 84
+    max_per_1dot5_sec = 2
+    max_per_min = 42
     ip_max_per_1dot5_sec = max_per_1dot5_sec * 8
     ip_max_per_min = max_per_min * 8
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
@@ -146,34 +179,44 @@ def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
     f_coding = f"{coding: <5}"
     f_port = f"{port: <5}"
     
+    tp = packet._wd_addr.Timestamp
+    broadcast_counters: dict[str, PPTCounter]
+    ip_counters: dict[str, PPTCounter]
+    
     if port.isdigit() and (0 <= int(port) <= 65535):
         if broadcast_counters.get(sid, None) is None:
             broadcast_counters[sid] = PPTCounter(sid)
-        broadcast_counters[sid].trig()
+        broadcast_counters[sid].trig(tp)
+        b_ut = broadcast_counters[sid].trigged_this_utime(tp)
+        b_pm = broadcast_counters[sid].maxium_history_window(tp)
         f_per_1dot5_sec = color_gradient(
-            round(broadcast_counters[sid].get_per_time(1.5)),
+            round(b_ut),
             max_val=max_per_1dot5_sec,
             pad_ex=2,
         )
         f_per_min = color_gradient(
-            round(broadcast_counters[sid].get_per_time(60.0)),
+            round(b_pm),
             max_val=max_per_min,
             pad_ex=2,
         )
     else:
+        b_ut = -1
+        b_pm = -1
         f_per_1dot5_sec = "?  "
         f_per_min = "?   "
     
     if ip_counters.get(src_ip, None) is None:
         ip_counters[src_ip] = PPTCounter(src_ip)
-    ip_counters[src_ip].trig()
+    ip_counters[src_ip].trig(tp)
+    i_ut = ip_counters[src_ip].trigged_this_utime(tp)
+    i_pm = ip_counters[src_ip].maxium_history_window(tp)
     f_ip_per_1dot5_sec = color_gradient(
-        round(ip_counters[src_ip].get_per_time(1.5)),
+        round(i_ut),
         max_val=ip_max_per_1dot5_sec,
         pad_ex=2,
     )
     f_ip_per_min = color_gradient(
-        round(ip_counters[src_ip].get_per_time(60.0)),
+        round(ip_counters[src_ip].sum_history_window(tp)),
         max_val=ip_max_per_min,
         pad_ex=2,
     )
@@ -184,15 +227,15 @@ def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
 
     try:
         if (
-            broadcast_counters[sid].get_per_time(1.5) > max_per_1dot5_sec
-            or broadcast_counters[sid].get_per_time(60.0) > max_per_min
+            b_ut > max_per_1dot5_sec
+            or broadcast_counters[sid].sum_history_window(tp) > max_per_min
         ):
             result = False
     except:
         pass
     if (
-        ip_counters[src_ip].get_per_time(1.5) > ip_max_per_1dot5_sec
-        or ip_counters[src_ip].get_per_time(60.0) > ip_max_per_min
+        i_ut > ip_max_per_1dot5_sec
+        or i_pm > ip_max_per_min
     ):
         result = False
     if not (port.isdigit() and 0 <= int(port) <= 65535):
@@ -212,7 +255,7 @@ def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
 \033[0;1;94m{f_dst_ip} \
 \033[0;1;35m{f_port[:5]} \
 \033[0;31m{f_coding} """
-        + ("\033[0;92m[Allowed →]" if result else "\033[0;91m[Blocked ✘]")
+        + ("\033[0;92m[A →]" if result else "\033[1;38;2;251;242;219;48;2;200;0;0m[B ✘]")
         + f"\033[0m {f_motd}\033[0m"
     )
 
@@ -234,9 +277,10 @@ def will_update(timestamp: float):  # noqa: ARG001
 
 
 def on_updated(timestamp: float):  # noqa: ARG001
-    global utils, hard_blacklist
+    global utils, qpctime, hard_blacklist
     print("on updated", time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
     utils = importlib.reload(utils)
+    qpctime = importlib.reload(qpctime)
     # if kept_data.get('packet_logger_term', None) is None:
     # kept_data['packet_logger_term'] = Terminal('Mc LanB Firewall: Packet Logger Terminal')
     # kept_data['packet_logger_term'].alloc(configs={'enable_input': False})
