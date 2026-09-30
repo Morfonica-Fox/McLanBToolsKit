@@ -9,7 +9,7 @@ from typing import (
     TypeVar,
 )
 
-import atomicx
+import atomics
 
 # 说真的我也不知道他能不能跑
 # 记得有空尝试实现一下 MutableMapping abc -- Cbscfe
@@ -29,8 +29,8 @@ class concurrent_dict(MutableMapping[K, V]):  # noqa: N801
             threading.Lock() for _ in range(1 << self.capacity)
         ]
         self._lock_on_change = threading.Lock()
-        self._ops_executing = atomicx.AtomicInt()
-        self._is_changeing = atomicx.AtomicBool(False)
+        self._ops_executing = atomics.atomic(8, atomics.UINT)
+        self._is_changeing = atomics.atomic(width=1, atype=atomics.UINT)
 
     @staticmethod
     def _non_atomised_wrapper(func: Callable):
@@ -65,7 +65,7 @@ class concurrent_dict(MutableMapping[K, V]):  # noqa: N801
             self._buckets_locks: list[threading.Lock] = [
                 threading.Lock() for _ in range(1 << self.capacity)
             ]
-            self._is_changeing.store(False)
+            self._is_changeing.store(0)
 
     @_non_atomised_wrapper
     def put(self, key, value, inaccurate: bool = False):
