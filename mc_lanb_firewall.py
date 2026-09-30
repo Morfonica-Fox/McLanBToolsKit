@@ -20,7 +20,7 @@ import threading
 import time
 from contextlib import suppress
 from pathlib import Path
-from typing import NoReturn
+from typing import NoReturn, Callable
 
 import pydivert
 from watchdog.events import FileSystemEventHandler
@@ -34,6 +34,29 @@ from mc_lanb_advtools import *
 
 ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
 # mc_lanb_cond.kept_data = {}
+
+
+def benchmark_func(
+    func: Callable,
+    args: list = None,
+    kwargs: dict = None,
+    time_testing: float = 10.0
+) -> tuple[float, float]:
+    if args is None:
+        args = []
+    if kwargs is None:
+        kwargs = {}
+
+    start_time = time.perf_counter()
+    count = 0
+    while time.perf_counter() - start_time < time_testing:
+        func(*args, **kwargs)
+        count += 1
+
+    actual_elapsed = time.perf_counter() - start_time
+    avg_cost = actual_elapsed / count
+    qps = count / actual_elapsed
+    return avg_cost, qps
 
 
 def install_whl_package(whl_filename: str) -> bool:
@@ -140,6 +163,39 @@ def main():
 
 enable_vt_console()
 if __name__ == "__main__":
-    start_mcast_hold_daemon()
-    already_holded_multicast.wait()
-    main()
+    if len(sys.argv) <= 1 or sys.argv[1] != "benchmark":
+        start_mcast_hold_daemon()
+        already_holded_multicast.wait()
+        main()
+    else:
+        class FakeWD:
+            def send(self, *args, **kwargs):
+                pass
+        fake_wd = FakeWD()
+        class FakePkt_Valid:
+            payload = b'[MOTD]qwqqwwqqqqwwqwwwwqqqqqq[/MOTD][AD]25565[/AD]'
+            src_addr = "benchmark_fakeip1"
+            dst_addr = "benchmark_fakeip1"
+        class FakePkt_InvalidPort:
+            payload = b'[MOTD]qwqqwwqqqqwwqwwwwqqqqqq[/MOTD][AD]-114514a[/AD]'
+            src_addr = "benchmark_fakeip2"
+            dst_addr = "benchmark_fakeip2"
+        class FakePkt_InvalidFormatting:
+            payload = b'[MMTOD]qwqqwwqqqqwwqwwwwqqqqqq[//////OOOOTTM][AI][[[[]![[[/??][AD]25565[/AD]'
+            src_addr = "benchmark_fakeip3"
+            dst_addr = "benchmark_fakeip3"
+        fake_pkt_ip = FakePkt_InvalidPort()
+        fake_pkt_if = FakePkt_InvalidFormatting()
+        fake_pkt_v = FakePkt_Valid()
+        avg_cost_v, qps_v = benchmark_func(mc_lanb_cond.handler, args=[fake_pkt_v, fake_wd], time_testing=10.0)
+        avg_cost_ip, qps_ip = benchmark_func(mc_lanb_cond.handler, args=[fake_pkt_ip, fake_wd], time_testing=10.0)
+        print('接下来 将进行不合法的包的压测 由于设计 不合法的包将不会产生任何输出 所以不是终端卡死 请注意辨别')
+        print('Next, we will perform illegal packet testing. Since the design does not produce any output for illegal packets, it is not terminal dead. Please distinguish. ')
+        avg_cost_if, qps_if = benchmark_func(mc_lanb_cond.handler, args=[fake_pkt_if, fake_wd], time_testing=10.0)
+        print(f'for vaild packet, ')
+        print(f"avg_cost: {avg_cost_v}, qps: {qps_v}")
+        print(f'for invaild port packet, ')
+        print(f"avg_cost: {avg_cost_ip}, qps: {qps_ip}")
+        print(f'for invaild formatting packet, ')
+        print(f"avg_cost: {avg_cost_if}, qps: {qps_if}")
+
