@@ -162,7 +162,7 @@ def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
         )
     else:
         f_per_1dot5_sec = "?  "
-        f_per_min = "?  "
+        f_per_min = "?   "
     
     if ip_counters.get(src_ip, None) is None:
         ip_counters[src_ip] = PPTCounter(src_ip)
@@ -210,16 +210,17 @@ def handler(packet: pydivert.Packet, wd_object: pydivert.WinDivert):
 \033[0;1;94m{f_src_ip}\
 \033[0;33m ▶ \
 \033[0;1;94m{f_dst_ip} \
-\033[0;1;35m{f_port} \
+\033[0;1;35m{f_port[:5]} \
 \033[0;31m{f_coding} """
         + ("\033[0;92m[Allowed →]" if result else "\033[0;91m[Blocked ✘]")
         + f"\033[0m {f_motd}\033[0m"
     )
 
+    print(p_info)
+
     # 修复 (Neo)Forge 客户端收不到广播包的问题
     packet.dst_addr = "255.255.255.255"
 
-    print(p_info)
     if result:
         wd_object.send(packet)
 
