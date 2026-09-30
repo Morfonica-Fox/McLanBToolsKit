@@ -40,18 +40,15 @@
 | pydivert | ≥ 2.1.0 | WinDivert Python 绑定 |
 | charset-normalizer | ≥ 2.0.0 | 自动字符集检测 |
 | watchdog | ≥ 6.0.0 | 文件变更监控（热重载） |
-| atomicx | ≥ 1.0.0 | 用于处理多线程并发和锁机制 |
+| atomics | ≥ 1.0.3 | 用于处理多线程并发和锁机制 |
 
 ### 已知稳定环境
 
-**环境 A**
-- PyPy 3.11 + pydivert 2.1.0 + charset-normalizer 3.4.7 + watchdog 6.0.0 + atomicx 1.0.0
+**环境 A（推荐）**
+- CPython 3.12 + pydivert 3.1.2 + charset-normalizer 3.4.7 + watchdog 6.0.0 + atomics 1.0.3
 
-**环境 B（推荐）**
-- CPython 3.12 + pydivert 3.1.2 + charset-normalizer 3.4.7 + watchdog 6.0.0 + atomicx 1.0.0
-
-**环境 C**
-- CPython 3.11 + pydivert 3.1.2 + charset-normalizer 3.4.7 + watchdog 6.0.0 + atomicx 1.0.0
+**环境 B**
+- CPython 3.11 + pydivert 3.1.2 + charset-normalizer 3.4.7 + watchdog 6.0.0 + atomics 1.0.3
 
 ### 自定义拦截规则
 
@@ -145,3 +142,7 @@ Minecraft 客户端通过 UDP 组播 `224.0.2.60:4445` 发现局域网服务器�
 ## 许可证
 
 [MIT](LICENSE)
+
+## 值得注意的更新
+
+详见 updates.md 文件。
