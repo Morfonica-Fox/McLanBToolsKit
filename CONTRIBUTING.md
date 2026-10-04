@@ -30,6 +30,8 @@ black .
 
 两者的配置已写入 `pyproject.toml`，运行时会自动读取，无需额外参数。配置文件已设置 `profile = "black"` 确保 isort 输出与 Black 兼容，同时 `force_sort_within_sections = true` 确保 isort 的排序决策在边界情况下优先。
 
+注: 谁他妈拿AI写的，根本就没有写入 `pyproject.toml`
+
 ### 格式化顺序
 
 1. **isort 先行**：处理所有 import 语句的组织、分组、排序

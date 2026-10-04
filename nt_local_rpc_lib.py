@@ -303,12 +303,12 @@ class rpc_server:  # noqa: N801
                         self._command_queue.put(json.loads(command.decode("utf-8")))
                 try:
                     close_handle(h)
-                except:
+                except Exception:
                     pass
         finally:
             try:
-                close_handle(h)
-            except:
+                close_handle(h)  # type: ignore
+            except Exception:
                 pass
 
     def command_exec_frame(self):

@@ -88,7 +88,7 @@ IPType: TypeAlias = Literal["ipv4/v8", "ipv4", "ipv8", "ipv6", "unknown"]
 class ParsedPacket(NamedTuple):
     motd: str
     ad: str
-    fml: str | None
+    fml: str | None = None
 
 
 def auto_decode_bytes(
@@ -162,9 +162,7 @@ def parse_mc_style(
     buf.seek(0)
 
     color_mappings = (
-        COLOR_MAPPINGS.copy()
-        if always_hex_color
-        else COLOR_MAPPINGS_ANSI.copy()
+        COLOR_MAPPINGS.copy() if always_hex_color else COLOR_MAPPINGS_ANSI.copy()
     )
     if always_hex_color:
         for key in color_mappings:
@@ -182,9 +180,7 @@ def parse_mc_style(
     will_skipped_char_cnt = 0
 
     if using_gray_default:
-        buf.write(
-            f"\033[0;{color_mappings['7']}m"
-        )  # 像原版客户端一样的默认灰色
+        buf.write(f"\033[0;{color_mappings['7']}m")  # 像原版客户端一样的默认灰色
 
     for idx, char in enumerate(text):
         if will_skipped_char_cnt > 0:
@@ -194,9 +190,7 @@ def parse_mc_style(
         if char != "§" or idx + 1 > max_idx:
             if safe and char in CONTROL_CHARS:
                 code = ord(char)
-                buf.write(
-                    f"\\x{code:02X}" if code <= 0xFF else f"\\u{code:08X}"
-                )
+                buf.write(f"\\x{code:02X}" if code <= 0xFF else f"\\u{code:08X}")
             else:
                 buf.write(char)
             continue
@@ -219,9 +213,7 @@ def parse_mc_style(
             will_skipped_char_cnt += 1
         elif next_char == "r" and enable_reset:
             buf.write(
-                f"\033[0;{color_mappings['7']}m"
-                if using_gray_default
-                else "\033[0m"
+                f"\033[0;{color_mappings['7']}m" if using_gray_default else "\033[0m"
             )
             will_skipped_char_cnt += 1
         elif enable_true_color and next_char == "x" and idx + 13 <= max_idx:
@@ -237,9 +229,7 @@ def parse_mc_style(
         else:
             if safe and char in CONTROL_CHARS:
                 code = ord(char)
-                buf.write(
-                    f"\\x{code:02X}" if code <= 0xFF else f"\\u{code:08X}"
-                )
+                buf.write(f"\\x{code:02X}" if code <= 0xFF else f"\\u{code:08X}")
             else:
                 buf.write(char)
 

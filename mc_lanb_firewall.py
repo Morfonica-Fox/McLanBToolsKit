@@ -176,24 +176,24 @@ if __name__ == "__main__":
 
         fake_wd = FakeWD()
 
-        class FakePkt_Valid:
+        class FakePktValid:
             payload = b"[MOTD]qwqqwwqqqqwwqwwwwqqqqqq[/MOTD][AD]25565[/AD]"
             src_addr = "benchmark_fakeip1"
             dst_addr = "benchmark_fakeip1"
 
-        class FakePkt_InvalidPort:
+        class FakePktInvalidPort:
             payload = b"[MOTD]qwqqwwqqqqwwqwwwwqqqqqq[/MOTD][AD]-114514a[/AD]"
             src_addr = "benchmark_fakeip2"
             dst_addr = "benchmark_fakeip2"
 
-        class FakePkt_InvalidFormatting:
+        class FakePktInvalidFormatting:
             payload = b"[MMTOD]qwqqwwqqqqwwqwwwwqqqqqq[//////OOOOTTM][AI][[[[]![[[/??][AD]25565[/AD]"
             src_addr = "benchmark_fakeip3"
             dst_addr = "benchmark_fakeip3"
 
-        fake_pkt_ip = FakePkt_InvalidPort()
-        fake_pkt_if = FakePkt_InvalidFormatting()
-        fake_pkt_v = FakePkt_Valid()
+        fake_pkt_ip = FakePktInvalidPort()
+        fake_pkt_if = FakePktInvalidFormatting()
+        fake_pkt_v = FakePktValid()
         avg_cost_v, qps_v = benchmark_func(
             mc_lanb_cond.handler,
             args=[fake_pkt_v, fake_wd],
