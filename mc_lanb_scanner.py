@@ -11,12 +11,13 @@
 import asyncio
 import ctypes
 import ctypes.wintypes
+from dataclasses import dataclass
 import sys
 import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import NoReturn, TypeAlias, NamedTuple
+from typing import NoReturn, TypeAlias
 
 import pydivert
 from mcstatus import JavaServer
@@ -104,18 +105,18 @@ def qpc_to_utc_datetime(qpc_tick: int) -> datetime:
 
 HashedServer: TypeAlias = tuple
 
-
-class PlayerInfo(NamedTuple):
+@dataclass
+class PlayerInfo:
     player_count: int
     player_sample: Any  # 我不知道这是啥...
 
-
-class ServerData(NamedTuple):
+@dataclass
+class ServerData:
     timestamp: int
     last_scan_timestamp: int
     motd: str
     server_obj: JavaServer | None
-    player_info: Any  # 我不知道这是啥...
+    player_info: PlayerInfo
 
 # TODO: 太麻烦了我懒得改,下面的list实际上是ServerData
 servers: concurrent_dict[HashedServer, list] = concurrent_dict()
