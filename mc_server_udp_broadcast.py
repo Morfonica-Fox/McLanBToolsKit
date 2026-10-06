@@ -1,10 +1,11 @@
 import socket
 import threading
 import time
-from typing import Callable
+from typing import Any, Callable, TypedDict
 
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
-from watchdog.observers import Observer, ObserverType
+from watchdog.observers import Observer
+from watchdog.observers.api import BaseObserver
 
 # import os
 # os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -58,7 +59,7 @@ class ConfFlushHandler(FileSystemEventHandler):
         start_broadcast_worker()
 
 
-def start_conf_flush_monitor():
+def start_conf_flush_monitor() -> tuple[ConfFlushHandler, BaseObserver]:
     observer = Observer()
     handler = ConfFlushHandler()
     observer.schedule(handler, ".", recursive=False)
@@ -67,39 +68,38 @@ def start_conf_flush_monitor():
     return handler, observer
 
 
-def stop_conf_flush_monitor(observer: ObserverType):
-    observer.stop()  # 我不明白  # type: ignore
-    observer.join()  # 这个什么库，类型注解怎么写的  # type: ignore
+def stop_conf_flush_monitor(observer: BaseObserver):
+    observer.stop()
+    observer.join()
 
 
-def broadcast_worker(called_server: dict | Callable):
+class ConfigServerData(TypedDict):
+    port: Any
+    motd: Any
+    send_delay: float | Callable[..., float]
+
+
+def broadcast_worker(called_server: ConfigServerData | Callable[..., ConfigServerData]):
     global working
 
     while working:
         start_time = time.time()
 
-        if isinstance(called_server, dict):
-            server = called_server
-        elif callable(called_server):
-            server = called_server()
+        server = called_server() if callable(called_server) else called_server
 
         server_port = server["port"]
         server_motd = server["motd"]
         send_delay = server["send_delay"]
-
         if callable(send_delay):
-            send_delay = (
-                send_delay()
-            )  # 如果send_delay是函数 则调用函数获取send_delay
+            send_delay = send_delay()
+
         send_multicast(
             MULTICAST_GROUP,
             MULTICAST_PORT,
             f"[MOTD]{server_motd}[/MOTD][AD]{server_port}[/AD]",
         )
         while (time.time() - start_time < send_delay) and working:
-            time.sleep(
-                min(max(time.time() - start_time - send_delay, 0), 0.01)
-            )
+            time.sleep(min(max(time.time() - start_time - send_delay, 0), 0.01))
 
 
 def start_broadcast_worker():
@@ -114,7 +114,9 @@ def start_broadcast_worker():
     working = True
     for server in msc["servers"]:
         worker_thread = threading.Thread(
-            target=broadcast_worker, args=(server,), daemon=True
+            target=broadcast_worker,
+            args=(server,),
+            daemon=True,
         )
         worker_thread.start()  # 启动新的工作线程
         worker_threads.append(worker_thread)  # 将工作线程添加到列表中
@@ -135,16 +137,19 @@ load_servers_from_conf()
 
 if __name__ == "__main__":
     print(
-        "\033[1;38;2;173;56;232mMinecraft LanB Project\033[0m / \033[1;38;2;151;255;177mUDP Server Broadcaster\033[0m 1.2.0-dev Running"
+        "\033[1;38;2;173;56;232mMinecraft LanB Project"
+        "\033[0m / "
+        "\033[1;38;2;151;255;177mUDP Server Broadcaster"
+        "\033[0m 1.2.0-dev Running"
     )
 
-    worker_threads = []
+    worker_threads: list[threading.Thread] = []
 
     MULTICAST_GROUP = "224.0.2.60"
     MULTICAST_PORT = 4445
 
+    hdl, obs = start_conf_flush_monitor()
     try:
-        hdl, obs = start_conf_flush_monitor()
         # reloader = threading.Thread(target=delay_reload_config, daemon=True)
         # reloader.start()
         start_broadcast_worker()

@@ -77,7 +77,7 @@ CONTROL_CHARS: set[str] = set(
 
 PACKET_PATTERN = re.compile(
     r"""\[MOTD\](?P<motd>.*)\[/MOTD\]  # 捕获MOTD和端口号
-        \[AD\](?P<ad>.*)\[/AD\]        # 以上两项必须出现
+        \[AD\](?P<ad>.*)\[/AD\]        # 这两项必须且连续的出现
         (\[FML\](?P<fml>.*)\[/FML\])?  # 捕获FML，这一项可选""",
     re.VERBOSE,
 )

@@ -33,7 +33,7 @@ script_dir = Path(__file__).parent.resolve()  # 支持Embedding版本Python!
 sys.path.insert(0, str(script_dir))  # Embedding版默认不从脚本所在目录导入库
 
 
-banned_ips = {"26.19.87.179"}
+banned_ips = {"26.19.87.179"}  # 默认屏蔽 lzh000 玩家，原因目前未知
 kept_data: TypedDict[
     {
         "ppt_counter:data": dict[str, list[list[int] | int | None]],  # 我不明白

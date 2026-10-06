@@ -57,9 +57,7 @@ def get_qpc_frequency() -> int:
 
 
 GetSystemTimePreciseAsFileTime = kernel32.GetSystemTimePreciseAsFileTime
-GetSystemTimePreciseAsFileTime.argtypes = [
-    ctypes.POINTER(ctypes.wintypes.FILETIME)
-]
+GetSystemTimePreciseAsFileTime.argtypes = [ctypes.POINTER(ctypes.wintypes.FILETIME)]
 
 
 def get_qpc_anchor() -> tuple[int, int, int]:
@@ -98,17 +96,17 @@ def qpc_to_utc_datetime(qpc_tick: int) -> datetime:
     unix_ns = filetime_to_unix_ns(ft)
     sec = unix_ns // 1_000_000_000
     ns = unix_ns % 1_000_000_000
-    return datetime.fromtimestamp(sec, tz=timezone.utc).replace(
-        microsecond=ns // 1000
-    )
+    return datetime.fromtimestamp(sec, tz=timezone.utc).replace(microsecond=ns // 1000)
 
 
 HashedServer: TypeAlias = tuple
+
 
 @dataclass
 class PlayerInfo:
     player_count: int
     player_sample: Any  # 我不知道这是啥...
+
 
 @dataclass
 class ServerData:
@@ -117,6 +115,7 @@ class ServerData:
     motd: str
     server_obj: JavaServer | None
     player_info: PlayerInfo
+
 
 # TODO: 太麻烦了我懒得改,下面的list实际上是ServerData
 servers: concurrent_dict[HashedServer, list] = concurrent_dict()
@@ -189,19 +188,11 @@ def cleanup_servers() -> NoReturn:
         for bucket_items_snap in servers_localvar.items(inaccurate=True):  # type: ignore
             will_delete_servers_hashes.clear()
             now_timestamp = get_raw_qpc()
-            for server_hash, (
-                timestamp,
-                last_scan_timestamp,
-                motd,
-                server_obj,
-                player_info,
-            ) in bucket_items_snap:
+            for server_hash, (timestamp, _, _, _, _) in bucket_items_snap:
                 if now_timestamp - timestamp > timeout_server_offline:
                     will_delete_servers_hashes.append(server_hash)
             for server_hash in will_delete_servers_hashes:
-                servers_localvar.remove(
-                    server_hash, inaccurate=True, slient=True
-                )
+                servers_localvar.remove(server_hash, inaccurate=True, slient=True)
             # except: pass
             # finally: pass
 
@@ -233,7 +224,7 @@ async def scan_servers() -> NoReturn:
         tasks.clear()
         for bucket_items_snap in servers_localvar.items(inaccurate=True):
             now_timestamp = get_raw_qpc()
-            for server_hash, server_info in bucket_items_snap:
+            for _, server_info in bucket_items_snap:
                 if now_timestamp - server_info[1] <= scan_delay_per_server:
                     continue
                 tasks.append(scan_server(server_info))
@@ -270,7 +261,7 @@ def advance_style_top_server(
 start_mcast_hold_daemon()
 already_holded_multicast.wait()
 
-print_res = []
+print_res: list[tuple[tuple[str, str], Any]] = []  # Any的位置是一个ServerData
 players_maxium_without_sample = 1024  # sample数量不达标时允许的最大玩家数
 sample_needed_trust_really = 10
 # debug_last_server_count = 0
@@ -288,42 +279,28 @@ while True:
     sys.stdout.buffer.write(b"\033[H\033[2J\033[3J")
 
     is_first = True
-    for (src_ip, port), (
-        timestamp,
-        last_scan_timestamp,
-        motd,
-        server_obj,
-        (player_count, player_sample),
-    ) in print_res:
+    for (src_ip, port), (_, last_scan_timestamp, motd, _, (player_count, player_sample)) in print_res:  # fmt:skip
         if (
             player_count > players_maxium_without_sample
             and len(player_sample) <= sample_needed_trust_really
         ):
             continue
-        try:
-            server_addr = src_ip + ":" + port
-            server_addr += " " * max(0, 21 - len(server_addr))
-            if is_first:
-                sys.stdout.buffer.write(
-                    advance_style_top_server(
-                        src_ip,
-                        port,
-                        last_scan_timestamp,
-                        motd,
-                        player_count,
-                        player_sample,
-                    ).encode("utf-8")
-                )
-                is_first = False
-            else:
-                sys.stdout.buffer.write(
-                    f"{server_addr} - {parse_mc_style(motd)} - {player_count} - {[player.name for player in player_sample]}\n".encode(
-                        "utf-8"
-                    )
-                )
-        # except: pass
-        finally:
-            pass
+
+        server_addr = (src_ip + ":" + port).rjust(21)
+        if is_first:
+            sys.stdout.buffer.write(
+                advance_style_top_server(
+                    src_ip,
+                    port,
+                    last_scan_timestamp,
+                    motd,
+                    player_count,
+                    player_sample,
+                ).encode("utf-8")
+            )
+            is_first = False
+        else:
+            sys.stdout.buffer.write(f"{server_addr} - {parse_mc_style(motd)} - {player_count} - {[player.name for player in player_sample]}\n".encode("utf-8"))  # fmt: skip
 
     sys.stdout.buffer.flush()
     sys.stdout.flush()

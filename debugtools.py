@@ -35,7 +35,7 @@ def dump_all_thread_stacks(output_buffer: BinaryIO = sys.stdout.buffer):
             continue
 
         # 遍历栈帧，从当前往调用者回溯
-        for frame_info in traceback.extract_stack(frame):
+        for _ in traceback.extract_stack(frame):
             pass
 
         # 手动遍历帧
@@ -75,7 +75,7 @@ def dump_all_thread_stacks(output_buffer: BinaryIO = sys.stdout.buffer):
     output_buffer.flush()
 
 
-def log_debug_exception(prompt: str, exit: bool = True, exit_code=1):
+def log_debug_exception(prompt: str, panic: bool = True, exit_code=1):
     print(f"\033[1;38;2;255;0;0mFATAL Debug Exception! {prompt}\033[0m")
-    if exit:
+    if panic:
         sys.exit(exit_code)
